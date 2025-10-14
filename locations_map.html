@@ -103,12 +103,9 @@
         let markers = [];
         let currentInfoWindow = null;
         let mapInitialized = false;
-
-        // Define farm locations array
+        
+        // Store all farm locations
         const farmLocations = [
-
-        // Function to add a marker to the map
-        function addMarker(location) {
             const marker = new google.maps.Marker({
                 position: { lat: location.lat, lng: location.lng },
                 map: map,
@@ -218,7 +215,7 @@
         }
 
         // Store all farm locations
-                        const farmLocations = [
+        const farmLocations = [
             {address: "127400 W Shore Dr", lat: 45.541532, lng: -98.622688},
             {address: "109 Hamilton Cir", lat: 45.463577, lng: -98.447926},
             {address: "12627 393rd Ave", lat: 45.556669, lng: -98.37171},
