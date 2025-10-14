@@ -129,18 +129,19 @@
             return marker;
         }
 
-        // Function to search locations
-        async function searchLocations() {
-            const searchTerm = document.getElementById('search-box').value.trim();
+        // Function to search farm addresses
+        async function searchFarmAddress(searchTerm) {
             if (!searchTerm) {
-                alert('Please enter an address to search');
-                return;
+                return null;
             }
 
-            try {
-                const foundLocation = await searchFarmAddress(searchTerm);
-                if (!foundLocation) {
-                    alert('Address not found in our farm locations. Please try another address.');
+            // Find matching location
+            const foundLocation = farmLocations.find(location => 
+                location.address.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            if (!foundLocation) {
+                return null;
                 }
             } catch (error) {
                 console.error('Search error:', error);
@@ -189,10 +190,10 @@
                 });
 
                 // Set up search functionality
-                document.getElementById('search-button').addEventListener('click', searchLocations);
+                document.getElementById('search-button').addEventListener('click', searchAddress);
                 document.getElementById('search-box').addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
-                        searchLocations();
+                        searchAddress();
                     }
                 });
             } catch (error) {
@@ -1443,17 +1444,25 @@
         // Handle address search
         async function searchAddress() {
             const loadingDiv = document.getElementById('loading');
+            const searchInput = document.getElementById('search-box').value;
             
             try {
-                // Wait for map to be ready
-                if (!window.google || !window.google.maps) {
-                    alert('Please wait for Google Maps to load...');
-                    return;
-                }
+                // Clear previous markers if any
+                markers.forEach(marker => marker.setMap(null));
+                markers = [];
 
-                // Get the map instance
-                if (!map) {
-                    alert('Map is not ready yet. Please try again in a moment.');
+                // Search for matching locations
+                const matchingLocations = farmLocations.filter(location => 
+                    location.address.toLowerCase().includes(searchInput.toLowerCase())
+                );
+
+                if (matchingLocations.length === 0) {
+                    alert('Address not found in our farm locations. Please try another address.');
+                    // Restore all markers
+                    farmLocations.forEach(location => {
+                        const marker = addMarker(location);
+                        markers.push(marker);
+                    });
                     return;
                 }
 
