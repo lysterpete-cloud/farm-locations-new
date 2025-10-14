@@ -1297,17 +1297,22 @@ locations_map.html:136 Uncaught SyntaxError: Unexpected token 'async' (at locati
                 maxZoom: 19
             });
             
-            // Add markers for all farm locations
-            farmLocations.forEach(location => {
-                addMarker(location);
-            });
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 43.0, lng: -95.0 },
+                zoom: 5,
                 mapTypeId: google.maps.MapTypeId.HYBRID,  // Satellite view with labels
                 tilt: 0,  // Ensure straight-down satellite view
                 streetViewControl: false,  // Disable street view
                 zoomControl: true,  // Show zoom controls
                 zoomControlOptions: {
                     position: google.maps.ControlPosition.RIGHT_CENTER
-                },
+                }
+            });
+
+            // Add markers for all farm locations
+            farmLocations.forEach(location => {
+                addMarker(location);
+            });
                 mapTypeControlOptions: {
                     mapTypeIds: ['hybrid', 'satellite', 'roadmap'],
                     style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR
