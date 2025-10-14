@@ -99,17 +99,13 @@
     </div>
     <script>
         // Global variables
-        var map = null;
-        var markers = [];
-        var currentInfoWindow = null;
-        var mapInitialized = false;
-
-        // Define farmLocations array first
-        const farmLocations = [
-
-        // Initialize markers array to store all map markers
-        const markers = [];
+        let map = null;
+        let markers = [];
         let currentInfoWindow = null;
+        let mapInitialized = false;
+
+        // Define farm locations array
+        const farmLocations = [
 
         // Function to add a marker to the map
         function addMarker(location) {
