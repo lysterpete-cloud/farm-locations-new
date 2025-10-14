@@ -13,13 +13,14 @@
         }
         #search-container {
             position: fixed;
-            bottom: 20px;
-            left: 20px;
-            z-index: 1000;
+            bottom: 40px;
+            left: 40px;
+            z-index: 9999;
             background: white;
-            padding: 10px;
-            border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: 2px solid #4285f4;
         }
         #search-box {
             padding: 8px;
@@ -108,7 +109,7 @@
                         // Force satellite view before zooming
                         map.setMapTypeId('satellite');
                         map.setCenter(location);
-                        map.setZoom(21);  // Absolute maximum zoom level
+                        map.setZoom(18);  // Zoom level for clear farm/property view
                         
                         // Create a marker at the location
                         const marker = new google.maps.Marker({
@@ -157,12 +158,17 @@
             
             // Create the map
             const map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 4,
+                zoom: 18,  // Default zoom level for property view
                 center: { lat: 43.0, lng: -95.0 },  // Roughly center of coverage area
-                maxZoom: 21,  // Maximum possible zoom
+                maxZoom: 19,  // Limit maximum zoom to maintain image quality
                 mapTypeId: 'satellite',  // Pure satellite view
                 tilt: 0,  // Ensure straight-down satellite view
-                streetViewControl: false  // Disable street view to prevent accidental switching
+                streetViewControl: false,  // Disable street view
+                zoomControl: true,  // Show zoom controls
+                zoomControlOptions: {
+                    position: google.maps.ControlPosition.RIGHT_CENTER
+                },
+                fullscreenControl: false  // Hide fullscreen control
             });
 
             // Force satellite view after initialization
