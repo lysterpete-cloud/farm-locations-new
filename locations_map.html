@@ -1444,17 +1444,34 @@
         // Handle address search
         async function searchAddress() {
             const loadingDiv = document.getElementById('loading');
-            const searchInput = document.getElementById('search-box').value;
+            const searchBox = document.getElementById('search-box');
+            const searchInput = searchBox ? searchBox.value.trim() : '';
             
             try {
+                if (!searchInput) {
+                    alert('Please enter an address to search');
+                    return;
+                }
+
+                // Show loading
+                loadingDiv.style.display = 'flex';
+                loadingDiv.textContent = 'Searching...';
+
                 // Clear previous markers if any
                 markers.forEach(marker => marker.setMap(null));
                 markers = [];
 
+                console.log('Searching for:', searchInput);  // Debug log
+
                 // Search for matching locations
-                const matchingLocations = farmLocations.filter(location => 
-                    location.address.toLowerCase().includes(searchInput.toLowerCase())
-                );
+                const matchingLocations = farmLocations.filter(location => {
+                    const locationAddress = location.address.toLowerCase();
+                    const searchTerm = searchInput.toLowerCase();
+                    console.log('Comparing:', locationAddress, searchTerm);  // Debug log
+                    return locationAddress.includes(searchTerm);
+                });
+
+                console.log('Found matches:', matchingLocations.length);  // Debug log
 
                 if (matchingLocations.length === 0) {
                     alert('Address not found in our farm locations. Please try another address.');
@@ -1463,21 +1480,29 @@
                         const marker = addMarker(location);
                         markers.push(marker);
                     });
+                    loadingDiv.style.display = 'none';
                     return;
                 }
 
-            // Get search value
-            const searchBox = document.getElementById('search-box');
-            const address = searchBox ? searchBox.value.trim() : '';
-            
-            if (!address) {
-                alert('Please enter an address to search');
-                return;
-            }
+                // Show matching locations
+                matchingLocations.forEach(location => {
+                    const marker = addMarker(location);
+                    markers.push(marker);
+                });
 
-            // Show loading
-            loadingDiv.style.display = 'flex';
-            loadingDiv.textContent = 'Searching...';
+                // Center on first match
+                if (matchingLocations.length > 0) {
+                    const firstMatch = matchingLocations[0];
+                    map.setCenter({ lat: firstMatch.lat, lng: firstMatch.lng });
+                    map.setZoom(12);
+                }
+
+                loadingDiv.style.display = 'none';
+            } catch (error) {
+                console.error('Search error:', error);
+                alert('An error occurred while searching. Please try again.');
+                loadingDiv.style.display = 'none';
+            }
             
             try {
                 // Clear previous markers
