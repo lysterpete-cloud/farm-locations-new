@@ -103,6 +103,7 @@ locations_map.html:136 Uncaught SyntaxError: Unexpected token 'async' (at locati
         // Global variables
         let map = null;
         let markers = [];
+        let currentMarker = null;
         let currentInfoWindow = null;
         let mapInitialized = false;
 
@@ -1154,10 +1155,15 @@ locations_map.html:136 Uncaught SyntaxError: Unexpected token 'async' (at locati
                     currentInfoWindow.close();
                 }
                 
+                const position = new google.maps.LatLng(
+                    parseFloat(foundLocation.lat),
+                    parseFloat(foundLocation.lng)
+                );
+                
                 // Create a new marker
                 currentMarker = new google.maps.Marker({
                     map: map,
-                    position: { lat: foundLocation.lat, lng: foundLocation.lng },
+                    position: position,
                     animation: google.maps.Animation.DROP
                 });
 
@@ -1168,7 +1174,7 @@ locations_map.html:136 Uncaught SyntaxError: Unexpected token 'async' (at locati
                 currentInfoWindow.open(map, currentMarker);
 
                 // Center and zoom the map
-                map.setCenter({ lat: foundLocation.lat, lng: foundLocation.lng });
+                map.setCenter(position);
                 map.setZoom(18);
             }
             
@@ -1228,16 +1234,28 @@ locations_map.html:136 Uncaught SyntaxError: Unexpected token 'async' (at locati
                 geocoder.geocode({ address: address }, (results, status) => {
                     if (status === 'OK' && results && results[0]) {
                         const location = results[0].geometry.location;
+                        const position = new google.maps.LatLng(
+                            location.lat(),
+                            location.lng()
+                        );
+                        
+                        // Clear previous marker and info window if they exist
+                        if (currentMarker) {
+                            currentMarker.setMap(null);
+                        }
+                        if (currentInfoWindow) {
+                            currentInfoWindow.close();
+                        }
                         
                         // Set to satellite with labels (hybrid mode)
                         map.setMapTypeId('hybrid');
-                        map.setCenter(location);
+                        map.setCenter(position);
                         map.setZoom(18);  // Zoom level for clear farm/property view
                     
                         // Create a marker at the location
-                        const marker = new google.maps.Marker({
+                        currentMarker = new google.maps.Marker({
                             map: map,
-                            position: location,
+                            position: position,
                             animation: google.maps.Animation.DROP
                         });
 
@@ -1268,12 +1286,18 @@ locations_map.html:136 Uncaught SyntaxError: Unexpected token 'async' (at locati
         // Search functionality
         function searchAddress() {
             const searchBox = document.getElementById('search-box');
-            const address = searchBox.value;
+            const address = searchBox.value.trim();
             if (address) {
-                geocodeAddress(address).catch(error => {
-                    console.error('Error searching address:', error);
-                    alert('Address not found. Please try another address.');
-                });
+                searchFarmAddress(address)
+                    .then(found => {
+                        if (!found) {
+                            return geocodeAddress(address);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error searching address:', error);
+                        alert('Address not found. Please try another address.');
+                    });
             }
         }
 
