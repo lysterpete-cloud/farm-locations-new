@@ -106,8 +106,8 @@
                     if (status === 'OK') {
                         const location = results[0].geometry.location;
                         
-                        // Force satellite view before zooming
-                        map.setMapTypeId('satellite');
+                        // Set to satellite with labels (hybrid mode)
+                        map.setMapTypeId('hybrid');
                         map.setCenter(location);
                         map.setZoom(18);  // Zoom level for clear farm/property view
                         
@@ -161,7 +161,7 @@
                 zoom: 18,  // Default zoom level for property view
                 center: { lat: 43.0, lng: -95.0 },  // Roughly center of coverage area
                 maxZoom: 19,  // Limit maximum zoom to maintain image quality
-                mapTypeId: 'satellite',  // Pure satellite view
+                mapTypeId: 'hybrid',  // Satellite view with labels
                 tilt: 0,  // Ensure straight-down satellite view
                 streetViewControl: false,  // Disable street view
                 zoomControl: true,  // Show zoom controls
