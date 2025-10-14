@@ -1411,36 +1411,7 @@
                         activeInfoWindow = infoWindow;
                     });
 
-                    bounds.extend(marker.getPosition());
-                    markers.push(marker);
                 });
-
-                processedCount += batch.length;
-                
-                // Update loading message
-                const loadingElement = document.getElementById('loading');
-                loadingElement.textContent = `Loading... ${processedCount}/${locations.length} locations`;
-
-                // Update stats panel
-                const statsElement = document.getElementById('stats');
-                const uniqueCities = new Set(locations.slice(0, processedCount).map(l => `${l.city}, ${l.state}`)).size;
-                statsElement.innerHTML = `
-                    <div><strong>Locations:</strong> ${processedCount}/${locations.length}</div>
-                    <div><strong>Cities:</strong> ${uniqueCities}</div>
-                `;
-
-                if (processedCount < locations.length) {
-                    // Process next batch
-                    setTimeout(processBatch, 10);
-                } else {
-                    // All markers added, fit bounds and remove loading overlay
-                    map.fitBounds(bounds);
-                    loadingElement.style.display = 'none';
-                }
-            }
-
-            // Start processing markers
-            processBatch();
         }
 
         // Handle address search
@@ -1504,12 +1475,6 @@
                 console.error('Search error:', error);
                 alert('An error occurred while searching. Please try again.');
                 loadingDiv.style.display = 'none';
-            }
-            
-                loadingDiv.style.display = 'none';
-            } catch (error) {
-                console.error('Search error:', error);
-                alert('Error during search: ' + error.message);
             }
         }
 
