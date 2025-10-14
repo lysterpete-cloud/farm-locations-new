@@ -99,7 +99,28 @@
             };
         }
 
+        // Store all farm locations
+        const farmLocations = [
+            // This array will be populated with all 881 addresses
+        ];
+
+        function searchFarmAddress(searchText) {
+            const search = searchText.toLowerCase();
+            return farmLocations.find(loc => 
+                loc.address.toLowerCase().includes(search) || 
+                loc.fullAddress.toLowerCase().includes(search)
+            );
+        }
+
         function geocodeAddress(address, map) {
+            // First try to find the address in our farm locations
+            const farmLocation = searchFarmAddress(address);
+            if (farmLocation) {
+                const location = { lat: farmLocation.lat, lng: farmLocation.lng };
+                return Promise.resolve(location);
+            }
+
+            // If not found in farm locations, try geocoding (as fallback)
             const geocoder = new google.maps.Geocoder();
             return new Promise((resolve, reject) => {
                 geocoder.geocode({ address: address }, (results, status) => {
@@ -145,11 +166,33 @@
         function searchAddress() {
             const address = document.getElementById('search-box').value;
             if (address) {
-                geocodeAddress(address, map)
-                    .catch(error => {
-                        alert('Address not found. Please try again.');
-                        console.error('Geocoding error:', error);
+                const farmLocation = searchFarmAddress(address);
+                if (farmLocation) {
+                    const location = { lat: farmLocation.lat, lng: farmLocation.lng };
+                    map.setMapTypeId(google.maps.MapTypeId.HYBRID);
+                    map.setCenter(location);
+                    map.setZoom(18);
+
+                    // Create a marker
+                    const marker = new google.maps.Marker({
+                        map: map,
+                        position: location,
+                        animation: google.maps.Animation.DROP
                     });
+
+                    // Create info window
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: `<div class="info-window">${farmLocation.fullAddress}</div>`
+                    });
+
+                    marker.addListener('click', () => {
+                        infoWindow.open(map, marker);
+                    });
+
+                    infoWindow.open(map, marker);
+                } else {
+                    alert('Address not found in our farm locations. Please try another address.');
+                }
             }
         }
 
@@ -161,12 +204,16 @@
                 zoom: 18,  // Default zoom level for property view
                 center: { lat: 43.0, lng: -95.0 },  // Roughly center of coverage area
                 maxZoom: 19,  // Limit maximum zoom to maintain image quality
-                mapTypeId: 'hybrid',  // Satellite view with labels
+                mapTypeId: google.maps.MapTypeId.HYBRID,  // Satellite view with labels
                 tilt: 0,  // Ensure straight-down satellite view
                 streetViewControl: false,  // Disable street view
                 zoomControl: true,  // Show zoom controls
                 zoomControlOptions: {
                     position: google.maps.ControlPosition.RIGHT_CENTER
+                },
+                mapTypeControlOptions: {
+                    mapTypeIds: ['hybrid', 'satellite', 'roadmap'],
+                    style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR
                 },
                 fullscreenControl: false  // Hide fullscreen control
             });
