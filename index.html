@@ -69,9 +69,13 @@
             );
             
             if (marker) {
-                // Zoom to location
-                map.setZoom(17);
+                // First center without zoom change
                 map.setCenter({ lat, lng });
+                
+                // Then smoothly zoom in
+                setTimeout(() => {
+                    map.setZoom(18);
+                }, 500);
 
                 // Show info window
                 if (window.activeInfoWindow) {
