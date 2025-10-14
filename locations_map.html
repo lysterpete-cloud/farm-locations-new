@@ -197,6 +197,11 @@ locations_map.html:136 Uncaught SyntaxError: Unexpected token 'async' (at locati
 
                 // Hide loading screen
                 document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                console.error('Map initialization failed:', error);
+                document.getElementById('loading').textContent = 'Error: ' + error.message;
+            }
+        }
 
                 // Update location count
                 document.getElementById('location-count').textContent = farmLocations.length;
