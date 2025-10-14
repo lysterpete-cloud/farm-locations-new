@@ -1206,34 +1206,32 @@
                     if (status === 'OK' && results && results[0]) {
                         const location = results[0].geometry.location;
                         
-                        try {
-                            // Set to satellite with labels (hybrid mode)
-                            map.setMapTypeId('hybrid');
-                            map.setCenter(location);
-                            map.setZoom(18);  // Zoom level for clear farm/property view
-                        
-                            // Create a marker at the location
-                            const marker = new google.maps.Marker({
-                                map: map,
-                                position: location,
-                                animation: google.maps.Animation.DROP
-                            });
+                        // Set to satellite with labels (hybrid mode)
+                        map.setMapTypeId('hybrid');
+                        map.setCenter(location);
+                        map.setZoom(18);  // Zoom level for clear farm/property view
+                    
+                        // Create a marker at the location
+                        const marker = new google.maps.Marker({
+                            map: map,
+                            position: location,
+                            animation: google.maps.Animation.DROP
+                        });
 
-                            // Create an info window with the address
-                            const infoWindow = new google.maps.InfoWindow({
-                                content: `<div class="info-window">${address}</div>`
-                            });
+                        // Create an info window with the address
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: `<div class="info-window">${address}</div>`
+                        });
 
-                            // Open the info window when marker is clicked
-                            marker.addListener('click', () => {
-                                infoWindow.open(map, marker);
-                            });
-
-                            // Open info window immediately
+                        // Open the info window when marker is clicked
+                        marker.addListener('click', () => {
                             infoWindow.open(map, marker);
-                            
-                            resolve(location);
-                        }
+                        });
+
+                        // Open info window immediately
+                        infoWindow.open(map, marker);
+                        
+                        resolve(location);
                     } else {
                         reject('Geocoding failed: ' + status);
                     }
