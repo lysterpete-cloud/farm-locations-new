@@ -1497,88 +1497,10 @@
                 loadingDiv.style.display = 'none';
             }
             
-            try {
-                // Clear previous markers
-                if (currentMarker) {
-                    currentMarker.setMap(null);
-                }
-                if (currentInfoWindow) {
-                    currentInfoWindow.close();
-                }
-
-                // Search in farmLocations array first
-                const searchTerm = address.toLowerCase();
-                const location = farmLocations.find(loc => 
-                    loc && loc.address && loc.address.toLowerCase().includes(searchTerm)
-                );
-
-                if (location) {
-                    // Found in farm locations
-                    const pos = { lat: location.lat, lng: location.lng };
-                    map.setCenter(pos);
-                    map.setZoom(18);
-                    
-                    // Create marker
-                    currentMarker = new google.maps.Marker({
-                        map: map,
-                        position: pos,
-                        animation: google.maps.Animation.DROP
-                    });
-
-                    // Create info window
-                    currentInfoWindow = new google.maps.InfoWindow({
-                        content: `<div class="info-window">${location.address}</div>`
-                    });
-                    currentInfoWindow.open(map, currentMarker);
-                } else {
-                    // If not found in farm locations, try geocoding
-                    const geocoder = new google.maps.Geocoder();
-                    geocoder.geocode({ address: address }, (results, status) => {
-                        if (status === 'OK' && results && results[0]) {
-                            const pos = results[0].geometry.location;
-                            map.setCenter(pos);
-                            map.setZoom(18);
-                            
-                            // Create marker
-                            currentMarker = new google.maps.Marker({
-                                map: map,
-                                position: pos,
-                                animation: google.maps.Animation.DROP
-                            });
-
-                            // Create info window
-                            currentInfoWindow = new google.maps.InfoWindow({
-                                content: `<div class="info-window">${results[0].formatted_address}</div>`
-                            });
-                            currentInfoWindow.open(map, currentMarker);
-                        } else {
-                            alert('Unable to find address. Please try a different address.');
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('Search error:', error);
-                alert('Error during search: ' + error.message);
-            } finally {
-                // Hide loading indicator
                 loadingDiv.style.display = 'none';
-            }
-                }
-
-                    // Add marker
-                    new google.maps.Marker({
-                        map: map,
-                        position: { lat: location.lat, lng: location.lng },
-                        title: location.address
-                    });
-                } else {
-                    alert('Location not found. Please try a different search.');
-                }
             } catch (error) {
                 console.error('Search error:', error);
                 alert('Error during search: ' + error.message);
-            } finally {
-                document.getElementById('loading').style.display = 'none';
             }
         }
 
