@@ -104,6 +104,13 @@
         var currentInfoWindow = null;
         var mapInitialized = false;
 
+        // Define farmLocations array first
+        const farmLocations = [
+
+        // Initialize markers array to store all map markers
+        const markers = [];
+        let currentInfoWindow = null;
+
         // Function to add a marker to the map
         function addMarker(location) {
             const marker = new google.maps.Marker({
@@ -113,7 +120,7 @@
             });
             
             // Create and store the info window with the marker
-            marker.infoWindow = new google.maps.InfoWindow({
+            const infoWindow = new google.maps.InfoWindow({
                 content: `<div class="info-window">${location.address}</div>`
             });
             
@@ -122,8 +129,8 @@
                 if (currentInfoWindow) {
                     currentInfoWindow.close();
                 }
-                marker.infoWindow.open(map, marker);
-                currentInfoWindow = marker.infoWindow;
+                infoWindow.open(map, marker);
+                currentInfoWindow = infoWindow;
             });
 
             return marker;
@@ -170,6 +177,8 @@
                 if (!map || typeof map.setMapTypeId !== 'function') {
                     throw new Error('Map failed to initialize properly');
                 }
+
+                console.log('Map initialized successfully');
 
                 // Hide loading screen
                 document.getElementById('loading').style.display = 'none';
