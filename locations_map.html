@@ -2,7 +2,19 @@
 <html>
 <head>
     <title>Farm Locations Map</title>
-    <script src="https://maps.googleapis.com/maps/api/js?v=weekly&key=AIzaSyAnT-2qEsLDwSFAHRfpWrNnlkjMC0R5DzY"></script>
+    <script>
+        function loadGoogleMaps() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://maps.googleapis.com/maps/api/js?v=weekly&key=AIzaSyAnT-2qEsLDwSFAHRfpWrNnlkjMC0R5DzY';
+                script.async = true;
+                script.defer = true;
+                script.onerror = () => reject(new Error('Failed to load Google Maps'));
+                script.onload = () => resolve();
+                document.head.appendChild(script);
+            });
+        }
+    </script>
     <style>
         #map {
             height: 100%;
@@ -86,6 +98,112 @@
         <div>Total Locations: <span id="location-count">0</span></div>
     </div>
     <script>
+        // Global variables
+        var map = null;
+        var markers = [];
+        var currentInfoWindow = null;
+        var mapInitialized = false;
+
+        // Function to add a marker to the map
+        function addMarker(location) {
+            const marker = new google.maps.Marker({
+                position: { lat: location.lat, lng: location.lng },
+                map: map,
+                title: location.address
+            });
+            
+            // Create and store the info window with the marker
+            marker.infoWindow = new google.maps.InfoWindow({
+                content: `<div class="info-window">${location.address}</div>`
+            });
+            
+            marker.addListener('click', () => {
+                // Close any open info window first
+                if (currentInfoWindow) {
+                    currentInfoWindow.close();
+                }
+                marker.infoWindow.open(map, marker);
+                currentInfoWindow = marker.infoWindow;
+            });
+
+            return marker;
+        }
+
+        // Function to search locations
+        async function searchLocations() {
+            const searchTerm = document.getElementById('search-box').value.trim();
+            if (!searchTerm) {
+                alert('Please enter an address to search');
+                return;
+            }
+
+            try {
+                const foundLocation = await searchFarmAddress(searchTerm);
+                if (!foundLocation) {
+                    alert('Address not found in our farm locations. Please try another address.');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                alert(error.message || 'Error searching for address');
+            }
+        }
+
+        // Initialize the map
+        async function initMap() {
+            try {
+                // First ensure Google Maps is loaded
+                await loadGoogleMaps();
+                
+                // Wait for the google.maps object to be fully initialized
+                if (!window.google || !window.google.maps) {
+                    throw new Error('Google Maps failed to load properly');
+                }
+                
+                const mapElement = document.getElementById('map');
+                if (!mapElement) {
+                    throw new Error('Map container element not found');
+                }
+
+                // Initialize map with all required options
+                map = new google.maps.Map(mapElement, {
+                    center: { lat: 43.0, lng: -95.0 }, // Center of the US farm belt
+                    zoom: 5,
+                    mapTypeId: google.maps.MapTypeId.HYBRID // Use the proper constant
+                });
+                
+                // Verify map was created successfully
+                if (!map || typeof map.setMapTypeId !== 'function') {
+                    throw new Error('Map failed to initialize properly');
+                }
+
+                // Hide loading screen
+                document.getElementById('loading').style.display = 'none';
+
+                // Update location count
+                document.getElementById('location-count').textContent = farmLocations.length;
+
+                // Add all markers and store them
+                farmLocations.forEach(location => {
+                    const marker = addMarker(location);
+                    markers.push(marker);
+                });
+
+                // Set up search functionality
+                document.getElementById('search-button').addEventListener('click', searchLocations);
+                document.getElementById('search-box').addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        searchLocations();
+                    }
+                });
+            } catch (error) {
+                console.error('Error initializing map:', error);
+                document.getElementById('loading').textContent = 'Error loading map: ' + error;
+            }
+        }
+
+        // Start map initialization when the page loads
+        window.addEventListener('load', initMap);
+
         // Function to get URL parameters
         function getUrlParams() {
             const params = new URLSearchParams(window.location.search);
@@ -100,7 +218,7 @@
         }
 
         // Store all farm locations
-        const farmLocations = [
+                        const farmLocations = [
             {address: "127400 W Shore Dr", lat: 45.541532, lng: -98.622688},
             {address: "109 Hamilton Cir", lat: 45.463577, lng: -98.447926},
             {address: "12627 393rd Ave", lat: 45.556669, lng: -98.37171},
@@ -111,21 +229,978 @@
             {address: "5805 Manning Ave S", lat: 44.864894, lng: -92.860234},
             {address: "15588 45th St S", lat: 44.886407, lng: -92.789627},
             {address: "1752 Willow Ave", lat: 41.40197, lng: -91.521374},
-            // ... remaining locations will be added here
+            {address: "3107 250th St", lat: 41.292907, lng: -91.54366},
+            {address: "2765 180th St", lat: 41.395184, lng: -91.605607},
+            {address: "23222 County Road 111", lat: 46.492002, lng: -93.83059},
+            {address: "2804 Campus Dr", lat: 43.657067, lng: -93.409917},
+            {address: "870 Highway 5", lat: 41.036293, lng: -92.819532},
+            {address: "326 Ashley Ln", lat: 45.910419, lng: -95.381041},
+            {address: "2270 Old County Road 120 NE", lat: 45.945021, lng: -95.341529},
+            {address: "1401 Rosewood Cir SE", lat: 45.876045, lng: -95.344412},
+            {address: "3119 Vonderheide Dr SW", lat: 45.862715, lng: -95.45584},
+            {address: "4260 Little Ida Beach Rd NW", lat: 46.019658, lng: -95.441188},
+            {address: "2111 190th Ave", lat: 43.080634, lng: -94.089042},
+            {address: "1013 Yellowstone Ave", lat: 42.105097, lng: -102.866782},
+            {address: "324 Hillcrest Dr", lat: 42.11025, lng: -102.867},
+            {address: "1457 NE 96th St", lat: 41.604082, lng: -93.405779},
+            {address: "931 15th Ave SE", lat: 41.642738, lng: -93.442993},
+            {address: "15481 Zilla St NW", lat: 45.251175, lng: -93.297523},
+            {address: "227 SE 33rd St", lat: 41.695671, lng: -93.596953},
+            {address: "3496 NW 75th Pl", lat: 41.69795, lng: -93.665609},
+            {address: "3502 SW Timbergreen Rd", lat: 41.722666, lng: -93.64538},
+            {address: "609 NW Crestview Ct", lat: 41.737105, lng: -93.653935},
+            {address: "2506 SW Westwinds Blvd", lat: 41.703807, lng: -93.645195},
+            {address: "825 SE Rio Cir", lat: 41.722079, lng: -93.588206},
+            {address: "714 NW Rockcrest Cir", lat: 41.737482, lng: -93.645264},
+            {address: "3079 NW 75th Pl", lat: 41.698299, lng: -93.660672},
+            {address: "1348 NW 72nd Ave", lat: 41.691686, lng: -93.636202},
+            {address: "1510 NE Trilein Dr", lat: 41.743248, lng: -93.589656},
+            {address: "2927 NW 84th Ave", lat: 41.713939, lng: -93.657612},
+            {address: "2645 NW 73rd Ave", lat: 41.694888, lng: -93.654429},
+            {address: "301 NW Ridgeline Dr", lat: 41.733437, lng: -93.652559},
+            {address: "2309 SW 22nd St", lat: 41.706827, lng: -93.630443},
+            {address: "22367 Norris Lake Rd", lat: 45.375816, lng: -93.411336},
+            {address: "202 Cimarron Rd", lat: 44.768691, lng: -93.228421},
+            {address: "14230 Heritage Ln", lat: 44.742447, lng: -93.236131},
+            {address: "13445 Gunflint Ct", lat: 44.753853, lng: -93.227344},
+            {address: "15707 Diamond Way", lat: 44.719631, lng: -93.158771},
+            {address: "3289 Katie Ct", lat: 45.041369, lng: -93.186277},
+            {address: "30631 330th Ave NW", lat: 48.322049, lng: -96.767381},
+            {address: "21032 452nd Ave", lat: 44.336046, lng: -97.168915},
+            {address: "310 Dam Rd", lat: 43.359838, lng: -95.129538},
+            {address: "535 Rohr St", lat: 43.362917, lng: -95.121114},
+            {address: "31132 County Road 10", lat: 46.066348, lng: -95.82853},
+            {address: "1904 Sycamore Ave", lat: 41.391649, lng: -95.011412},
+            {address: "3401 180th St NE", lat: 45.157287, lng: -94.78734},
+            {address: "1215 Oriole Ave", lat: 41.831435, lng: -94.822093},
+            {address: "1407 39th Ave NE", lat: 43.710897, lng: -92.955049},
+            {address: "3360 11th Ave NW", lat: 43.67679, lng: -93.023511},
+            {address: "2981 B Rd", lat: 40.770955, lng: -96.181125},
+            {address: "1429 N 42nd Rd", lat: 40.765211, lng: -96.065721},
+            {address: "45655 Sycamore Rd", lat: 41.44735, lng: -95.31509},
+            {address: "1163 Herndon Rd", lat: 41.8402, lng: -94.347963},
+            {address: "25440 473rd Ave", lat: 43.697587, lng: -96.749988},
+            {address: "27479 County Highway 83", lat: 46.361549, lng: -95.761053},
+            {address: "4754 Brentwood Rd", lat: 46.339028, lng: -94.302121},
+            {address: "326 Morton Dr", lat: 40.269009, lng: -96.720251},
+            {address: "29813 S 120th Rd", lat: 40.229695, lng: -96.565437},
+            {address: "2387 270th St", lat: 40.654885, lng: -94.661544},
+            {address: "11418 Magnolia Ln", lat: 44.93037, lng: -103.87313},
+            {address: "18725 Bait Rd", lat: 44.687556, lng: -103.790636},
+            {address: "616 Obrien Pkwy", lat: 44.613249, lng: -93.761649},
+            {address: "408 Dowding Ct", lat: 41.156568, lng: -95.897997},
+            {address: "4321 Amos Gates Dr", lat: 41.131646, lng: -95.978775},
+            {address: "1401 Lawrence Ln", lat: 41.156394, lng: -95.911266},
+            {address: "603 Louisiane Cir", lat: 41.160227, lng: -95.898974},
+            {address: "11767 Anderson Grv", lat: 41.132968, lng: -95.98042},
+            {address: "611 Spring St", lat: 42.260753, lng: -90.431847},
+            {address: "110 Sunrise Ct", lat: 42.271114, lng: -90.432386},
+            {address: "1941 Taylor Ave", lat: 42.769352, lng: -93.597408},
+            {address: "9415 Oman Rd NE", lat: 47.558586, lng: -94.686082},
+            {address: "6416 Birchmont Dr NE", lat: 47.531042, lng: -94.873526},
+            {address: "8638 White Oak St NE", lat: 47.550507, lng: -94.844015},
+            {address: "15175 S 176th St", lat: 40.661232, lng: -96.484806},
+            {address: "83 J Rd", lat: 40.654168, lng: -96.455442},
+            {address: "17306 Military Rd", lat: 41.351523, lng: -96.185487},
+            {address: "12417 N 179th Cir", lat: 41.372248, lng: -96.19595},
+            {address: "15172 Whitmore Cir", lat: 41.322085, lng: -96.152203},
+            {address: "18130 Thayer St", lat: 41.353422, lng: -96.199449},
+            {address: "7351 N 169th St", lat: 41.325254, lng: -96.179083},
+            {address: "408 S 11th St", lat: 43.076902, lng: -96.783947},
+            {address: "5048 55th Ave", lat: 41.577938, lng: -90.461988},
+            {address: "5734 Jenny Ln", lat: 41.560458, lng: -90.452815},
+            {address: "25535 Valley Dr", lat: 41.576724, lng: -90.405817},
+            {address: "43863 550th Ave", lat: 43.849733, lng: -94.979396},
+            {address: "2397 Quail Creek Pkwy NE", lat: 45.207972, lng: -93.209692},
+            {address: "4829 130th Ln NE", lat: 45.20708, lng: -93.147031},
+            {address: "4580 98th St SE", lat: 43.950698, lng: -93.142963},
+            {address: "11001 Cavell Cir", lat: 44.806095, lng: -93.395109},
+            {address: "8309 W 104th St", lat: 44.814939, lng: -93.39339},
+            {address: "5202 Ashlar Dr", lat: 44.797638, lng: -93.346102},
+            {address: "8640 11th Ave S", lat: 44.846544, lng: -93.259737},
+            {address: "5231 360th Ave", lat: 43.56107, lng: -94.149103},
+            {address: "19159 308th Ave", lat: 44.612085, lng: -100.002503},
+            {address: "1042 X Ave", lat: 42.055814, lng: -93.716857},
+            {address: "1211 Nightingale Pl", lat: 42.033256, lng: -93.904438},
+            {address: "1279 155th St", lat: 42.129916, lng: -93.919542},
+            {address: "529 Kale Rd", lat: 42.133589, lng: -93.965323},
+            {address: "6211 90th Ave", lat: 45.850235, lng: -94.473135},
+            {address: "14832 Pheasant Pl", lat: 44.106493, lng: -103.084781},
+            {address: "4898 Peterson Rd", lat: 46.446998, lng: -94.298386},
+            {address: "221 Fairway Cir", lat: 43.596371, lng: -96.557786},
+            {address: "2217 S Splitrock Blvd", lat: 43.568393, lng: -96.588421},
+            {address: "26493 483rd Ave", lat: 43.547376, lng: -96.554479},
+            {address: "2000 W River Bluff Dr", lat: 43.593155, lng: -96.623744},
+            {address: "2909 N Oak Rd", lat: 43.580388, lng: -96.614806},
+            {address: "1119 S 3rd Ave", lat: 41.396144, lng: -99.633573},
+            {address: "240 Pine Ridge Rd", lat: 44.289238, lng: -96.807543},
+            {address: "1440 Whitetail Path", lat: 44.355091, lng: -96.762102},
+            {address: "677 Park Ave", lat: 44.297596, lng: -96.773819},
+            {address: "1451 Whitetail Path", lat: 44.355091, lng: -96.762102},
+            {address: "1609 Derdall Dr", lat: 44.303036, lng: -96.777862},
+            {address: "1298 Road West J N", lat: 41.174199, lng: -101.926564},
+            {address: "44084 189th St", lat: 44.645729, lng: -97.39444},
+            {address: "3846 110th St", lat: 42.01954, lng: -90.34641},
+            {address: "7391 20th St NE", lat: 45.177798, lng: -93.739946},
+            {address: "1234 Westfarm Ln", lat: 45.18653, lng: -93.891934},
+            {address: "701 Circle Dr", lat: 45.179535, lng: -93.898513},
+            {address: "31705 468th Ave", lat: 42.793292, lng: -96.846855},
+            {address: "14817 Southcross Ln", lat: 44.733913, lng: -93.265824},
+            {address: "1001 3 1/2 Ave NW", lat: 44.039721, lng: -92.650465},
+            {address: "52 Frontier Rd SE", lat: 44.021117, lng: -92.645629},
+            {address: "914 Somerby Pkwy NE", lat: 44.045059, lng: -92.632722},
+            {address: "29145 600th Ave", lat: 41.933084, lng: -93.504366},
+            {address: "31100 County 58 Blvd", lat: 44.500246, lng: -92.777308},
+            {address: "9300 County 9 Blvd", lat: 44.399032, lng: -92.846062},
+            {address: "12909 250th St E", lat: 44.586917, lng: -92.844908},
+            {address: "1037 N Kidder St", lat: 43.310177, lng: -96.583831},
+            {address: "5683 SE 52nd St", lat: 41.530395, lng: -93.508608},
+            {address: "14803 Buchanan St", lat: 41.484976, lng: -93.524691},
+            {address: "2212 N Grant Rd", lat: 42.084534, lng: -94.859134},
+            {address: "405 Southridge Dr", lat: 42.050206, lng: -94.874588},
+            {address: "24694 120th Ave", lat: 42.291137, lng: -91.11051},
+            {address: "1214 Lakeshore Dr", lat: 42.54866, lng: -92.484901},
+            {address: "10505 Mark Rd", lat: 42.59809, lng: -92.54355},
+            {address: "7512 Poplar Ln", lat: 42.566888, lng: -92.507736},
+            {address: "8218 Buckridge Rd", lat: 42.620169, lng: -92.500739},
+            {address: "408 Golden Gate St", lat: 44.366234, lng: -103.771876},
+            {address: "1337 Rollins Rd", lat: 42.22409, lng: -91.493958},
+            {address: "45976 272nd St", lat: 43.44676, lng: -97.008731},
+            {address: "640 Pleasant View Rd", lat: 44.887848, lng: -93.537189},
+            {address: "401 Sunset Pl", lat: 43.067411, lng: -92.693085},
+            {address: "410 Meadow Ln", lat: 43.05987, lng: -92.652134},
+            {address: "3257 124th St", lat: 41.996239, lng: -90.459767},
+            {address: "8213 150th Ave SE", lat: 43.901028, lng: -92.180956},
+            {address: "24128 465th Ave", lat: 43.888182, lng: -96.903824},
+            {address: "376 Nottingham Dr", lat: 45.132481, lng: -93.154188},
+            {address: "329 W La Perla Dr", lat: 40.738247, lng: -95.108481},
+            {address: "47822 181st St", lat: 44.764705, lng: -96.637361},
+            {address: "111 Stonebrook Ct", lat: 43.265054, lng: -93.423741},
+            {address: "715 N Shore Dr", lat: 43.141067, lng: -93.398094},
+            {address: "402 Birch Ct", lat: 43.150242, lng: -93.385825},
+            {address: "1609 Poplar Pl", lat: 43.150696, lng: -93.387427},
+            {address: "114 Hill Ave", lat: 47.61056, lng: -96.816712},
+            {address: "4660 164th St", lat: 41.940444, lng: -90.187663},
+            {address: "3617 Valley Oaks Dr", lat: 41.830278, lng: -90.276593},
+            {address: "15382 Rosewood Dr", lat: 41.610926, lng: -93.831502},
+            {address: "15345 Ridgeview Dr", lat: 41.613288, lng: -93.831202},
+            {address: "9920 Carpenter Ave", lat: 41.603588, lng: -93.754371},
+            {address: "14030 Lake Shore Dr", lat: 41.610505, lng: -93.811896},
+            {address: "4018 NW 171st Ct", lat: 41.637729, lng: -93.854888},
+            {address: "13200 Forest Cir", lat: 41.601033, lng: -93.800098},
+            {address: "304 13th St N", lat: 45.475508, lng: -94.426769},
+            {address: "15062 Held Cir", lat: 45.541662, lng: -94.420488},
+            {address: "22271 469th Ave", lat: 44.160103, lng: -96.829338},
+            {address: "23317 471st Ave", lat: 44.005236, lng: -96.792349},
+            {address: "9380 County Road 140", lat: 44.797046, lng: -93.759956},
+            {address: "45541 247th St", lat: 43.804051, lng: -97.101837},
+            {address: "24437 463rd Ave", lat: 43.843404, lng: -96.951361},
+            {address: "25065 467th Ave", lat: 43.754142, lng: -96.873662},
+            {address: "1967 E Camino Real St", lat: 41.434856, lng: -97.324713},
+            {address: "4656 E 14th Ave", lat: 41.461104, lng: -97.311855},
+            {address: "4604 30th St", lat: 41.445829, lng: -97.384569},
+            {address: "12946 313th St", lat: 41.54218, lng: -97.29376},
+            {address: "4164 48th Ave", lat: 41.456432, lng: -97.388085},
+            {address: "1860 W Camino Real St", lat: 41.433259, lng: -97.326138},
+            {address: "5072 38th Ave", lat: 41.465102, lng: -97.375148},
+            {address: "12021 Ilex St NW", lat: 45.187816, lng: -93.27694},
+            {address: "735 Mesquite Dr", lat: 41.710204, lng: -91.579513},
+            {address: "2332 Liberty Dr", lat: 41.699465, lng: -91.620785},
+            {address: "4460 S 11th Ln", lat: 40.477394, lng: -96.705853},
+            {address: "10198 S 12th Rd", lat: 40.417907, lng: -96.70458},
+            {address: "202 E Welch St", lat: 41.365466, lng: -95.856745},
+            {address: "509 Hanna Trl", lat: 43.655081, lng: -96.817246},
+            {address: "101 E 8th St", lat: 43.655801, lng: -96.810829},
+            {address: "47021 254th St", lat: 43.701995, lng: -96.807979},
+            {address: "6508 41st Ave N", lat: 45.031452, lng: -93.363081},
+            {address: "36539 Meadowbrook Cir", lat: 41.515769, lng: -93.820488},
+            {address: "3138 155th St", lat: 41.426428, lng: -93.8407},
+            {address: "25341 Lower French Creek Rd", lat: 43.731329, lng: -103.508227},
+            {address: "25219 Ridgeview Rd", lat: 43.749654, lng: -103.63713},
+            {address: "1075 W Flurie Rd", lat: 42.514296, lng: -96.511146},
+            {address: "922 Willow Dr", lat: 42.487852, lng: -96.4901},
+            {address: "20578 Wendover Pl", lat: 41.738099, lng: -93.842377},
+            {address: "19268 110th St", lat: 40.841869, lng: -91.298338},
+            {address: "2615 Salem Rd", lat: 40.823698, lng: -91.406137},
+            {address: "904 Sellards Dr", lat: 45.07754, lng: -94.319284},
+            {address: "71248 268th St", lat: 45.136984, lng: -94.333782},
+            {address: "17375 745th Ave", lat: 44.998472, lng: -94.269807},
+            {address: "16610 705th Ave", lat: 44.987568, lng: -94.347849},
+            {address: "2352 220th St", lat: 41.858467, lng: -90.635135},
+            {address: "16038 225th St", lat: 40.71732, lng: -93.809926},
+            {address: "610 Park St", lat: 43.29887, lng: -91.796943},
+            {address: "2378 Trout River Rd", lat: 43.280955, lng: -91.67551},
+            {address: "3499 248th Ave", lat: 43.442553, lng: -91.889995},
+            {address: "1405 Skyline Dr", lat: 43.287907, lng: -91.792087},
+            {address: "1532 Canoe Ridge Rd", lat: 43.344626, lng: -91.701602},
+            {address: "2558 235th Ave", lat: 43.310551, lng: -91.862883},
+            {address: "1774 State Highway 9", lat: 43.285268, lng: -91.747041},
+            {address: "2569 Golfview Rd", lat: 43.309161, lng: -91.732034},
+            {address: "2579 265th Ave", lat: 43.309147, lng: -91.925901},
+            {address: "2563 Golfview Rd", lat: 43.308521, lng: -91.732021},
+            {address: "2276 Middle Calmar Rd", lat: 43.266793, lng: -91.797485},
+            {address: "2858 Nelson Rd", lat: 45.029692, lng: -93.756269},
+            {address: "3944 35th St SE", lat: 45.100597, lng: -93.807917},
+            {address: "9158 County Road 13 SE", lat: 45.018869, lng: -93.838529},
+            {address: "6190 Eaken Ave SE", lat: 45.061801, lng: -93.807146},
+            {address: "5477 50th St SE", lat: 45.077343, lng: -93.777717},
+            {address: "18126 405th Ave", lat: 43.749809, lng: -94.052587},
+            {address: "2669 220th Ave", lat: 42.402496, lng: -91.362668},
+            {address: "21265 258th St", lat: 42.416102, lng: -91.375659},
+            {address: "607 W 10th St", lat: 43.829902, lng: -96.726812},
+            {address: "701 Westview Dr", lat: 43.82723, lng: -96.727669},
+            {address: "24298 467A Ave", lat: 43.863024, lng: -96.857895},
+            {address: "48268 245th St", lat: 43.834671, lng: -96.558276},
+            {address: "330 E 3rd St Apt 3", lat: 43.822788, lng: -96.712393},
+            {address: "1717 215th Ave", lat: 41.928826, lng: -90.675096},
+            {address: "1568 Highway 39", lat: 42.129281, lng: -95.323714},
+            {address: "44624 W Little McDonald Dr", lat: 46.61071, lng: -95.729154},
+            {address: "15470 E Munson Dr", lat: 46.795067, lng: -95.892272},
+            {address: "66464 300th St", lat: 43.793483, lng: -92.718434},
+            {address: "16811 R Ave", lat: 42.459145, lng: -92.692051},
+            {address: "1113 6th Ave NE", lat: 46.883114, lng: -96.686288},
+            {address: "2431 Hillcrest Rd", lat: 40.608572, lng: -91.500311},
+            {address: "45318 140th St", lat: 45.697488, lng: -95.868905},
+            {address: "10086 Lake Eleanor Rd", lat: 42.442578, lng: -90.666101},
+            {address: "4004 London Rd Apt 1325", lat: 46.821137, lng: -92.041299},
+            {address: "4536 Berg Rd", lat: 47.001815, lng: -92.157761},
+            {address: "12084 Bagley Ave", lat: 44.412936, lng: -93.302219},
+            {address: "820 Great Oaks Ln", lat: 44.826777, lng: -93.12677},
+            {address: "4785 Dodd Rd", lat: 44.783547, lng: -93.119201},
+            {address: "4082 Johnny Cake Ridge Rd", lat: 44.808275, lng: -93.181207},
+            {address: "3655 Birchpond Rd", lat: 44.824982, lng: -93.186984},
+            {address: "21707 Deer Haven Trl", lat: 40.748993, lng: -96.423519},
+            {address: "1011 5th Ave SE", lat: 47.908095, lng: -97.011747},
+            {address: "2117 9th St SE", lat: 47.910222, lng: -96.985971},
+            {address: "49589 230th St", lat: 43.820893, lng: -93.875105},
+            {address: "5609 York Ave S", lat: 44.901219, lng: -93.319823},
+            {address: "4925 E Sunnyslope Rd", lat: 44.912802, lng: -93.344953},
+            {address: "7300 Cornelia Dr", lat: 44.870828, lng: -93.336343},
+            {address: "6600 Blackfoot Pass", lat: 44.882646, lng: -93.38548},
+            {address: "6033 Kaymar Dr", lat: 44.90127, lng: -93.378813},
+            {address: "4909 Maple Rd", lat: 44.913882, lng: -93.333202},
+            {address: "33238 240th Ave", lat: 46.097318, lng: -96.059871},
+            {address: "12883 240th St", lat: 41.654315, lng: -90.649528},
+            {address: "31726 473rd Ave", lat: 42.789592, lng: -96.745867},
+            {address: "32175 473rd Ave", lat: 42.725036, lng: -96.748683},
+            {address: "122 Green Court Dr", lat: 42.6788, lng: -96.676169},
+            {address: "12269 223rd Ave NW", lat: 45.378152, lng: -93.579515},
+            {address: "90 Morton Ave NW", lat: 45.301409, lng: -93.572437},
+            {address: "19450 Proctor Rd NW", lat: 45.324331, lng: -93.578375},
+            {address: "11455 199th Ave NW", lat: 45.333374, lng: -93.55822},
+            {address: "1510 N 216th St", lat: 41.27338, lng: -96.253335},
+            {address: "3036 Trailridge Blvd", lat: 41.230214, lng: -96.257869},
+            {address: "1320 N 181st St", lat: 41.27199, lng: -96.198437},
+            {address: "3016 S 217th Cir", lat: 41.230508, lng: -96.255424},
+            {address: "4902 N 192nd Avenue Cir", lat: 41.301128, lng: -96.216577},
+            {address: "4214 N 195th St", lat: 41.297112, lng: -96.220038},
+            {address: "23776 Panama Ave", lat: 44.604931, lng: -93.442285},
+            {address: "21969 Sd Highway 13", lat: 44.200591, lng: -96.587112},
+            {address: "9824 SW 75th St", lat: 43.982228, lng: -93.399112},
+            {address: "1768 Cedar St", lat: 47.883936, lng: -91.870336},
+            {address: "9500 Ely Rd", lat: 41.886271, lng: -91.600063},
+            {address: "2492 Ivanhoe Rd", lat: 41.919819, lng: -91.607776},
+            {address: "106 N Wallace St", lat: 43.120187, lng: -94.69003},
+            {address: "314 Ford Rd", lat: 43.136808, lng: -94.670382},
+            {address: "34327 County Highway 27", lat: 46.460571, lng: -96.032633},
+            {address: "1825 382nd Ave", lat: 43.383697, lng: -94.831994},
+            {address: "26435 407th Ave", lat: 43.553239, lng: -98.065465},
+            {address: "6410 Yosemite", lat: 44.888711, lng: -93.560508},
+            {address: "7411 Ridge Hill Rd", lat: 44.896179, lng: -93.536752},
+            {address: "1747 Mahogany Ave", lat: 41.053524, lng: -91.948058},
+            {address: "1826 Okra Blvd", lat: 41.044214, lng: -91.904583},
+            {address: "1608 Highway 1", lat: 41.073361, lng: -91.968526},
+            {address: "1218 Kodi Cir", lat: 41.000718, lng: -91.945029},
+            {address: "932 140th Ave", lat: 43.620924, lng: -94.591901},
+            {address: "70675 648 Ave", lat: 40.070934, lng: -95.674233},
+            {address: "24105 Cedar Ave", lat: 44.600299, lng: -93.218949},
+            {address: "20968 Flanders Way", lat: 44.645992, lng: -93.198013},
+            {address: "3080 220th St E", lat: 44.62994, lng: -93.045617},
+            {address: "19412 Colonial Trl", lat: 44.668313, lng: -93.14172},
+            {address: "20969 Clayton Ave", lat: 44.645181, lng: -93.035363},
+            {address: "11952 Carnation Ln SW", lat: 45.782178, lng: -95.543747},
+            {address: "600 14th Ave S", lat: 45.029708, lng: -99.133388},
+            {address: "23691 Ridgewood Cir", lat: 46.28477, lng: -95.999895},
+            {address: "1102 Westside Dr", lat: 46.278542, lng: -96.095833},
+            {address: "26137 County Highway 111", lat: 46.342572, lng: -96.032945},
+            {address: "37117 300th St SW", lat: 47.731531, lng: -96.848606},
+            {address: "8460 W Broadway Ave", lat: 45.286512, lng: -93.05483},
+            {address: "6775 N Shore Trl N", lat: 45.295151, lng: -92.968835},
+            {address: "8153 County Road 41", lat: 41.491699, lng: -96.060698},
+            {address: "3066 Gokao Ln", lat: 41.422953, lng: -96.074979},
+            {address: "1533 Lainson Ave", lat: 42.567743, lng: -94.226931},
+            {address: "38318 N Little McDonald Dr", lat: 46.618043, lng: -95.693768},
+            {address: "2675 270th St", lat: 42.965208, lng: -92.222946},
+            {address: "2745 220th St", lat: 43.037535, lng: -92.208895},
+            {address: "1822 County Road 19", lat: 41.493536, lng: -96.557612},
+            {address: "2146 County Road P", lat: 41.524396, lng: -96.513238},
+            {address: "3258 Nebraska Ave", lat: 41.460417, lng: -96.516956},
+            {address: "1228 N Garden City Rd", lat: 41.441454, lng: -96.465778},
+            {address: "821 S Chestnut St", lat: 40.647333, lng: -97.285364},
+            {address: "12856 County Road 8 NW", lat: 45.895064, lng: -95.568322},
+            {address: "24531 Holly Ave", lat: 42.868355, lng: -91.307034},
+            {address: "25427 478th Ave", lat: 43.699239, lng: -96.65186},
+            {address: "48639 256th St", lat: 43.673882, lng: -96.483875},
+            {address: "48553 254th St", lat: 43.702028, lng: -96.500777},
+            {address: "25210 483rd Ave", lat: 43.730465, lng: -96.550718},
+            {address: "25693 479th Ave", lat: 43.661193, lng: -96.632917},
+            {address: "3618 Edgewater Dr", lat: 44.713777, lng: -96.470428},
+            {address: "48488 179th St", lat: 44.794245, lng: -96.505648},
+            {address: "3690 Lakeview Dr", lat: 44.71382, lng: -96.467719},
+            {address: "610 N 13th St", lat: 40.532548, lng: -97.596247},
+            {address: "270132 County Road U", lat: 41.758936, lng: -103.555041},
+            {address: "16519 Us Highway 69", lat: 42.113756, lng: -93.621049},
+            {address: "1309 170th St", lat: 42.195848, lng: -92.707921},
+            {address: "1001 Mitchell Ct", lat: 44.760024, lng: -94.148815},
+            {address: "23239 State Highway 28", lat: 45.656174, lng: -95.412405},
+            {address: "21221 170th Ave", lat: 45.596405, lng: -95.284148},
+            {address: "25587 Nordic Point Dr", lat: 45.645576, lng: -95.461198},
+            {address: "60793 280th St", lat: 41.004628, lng: -95.651847},
+            {address: "30358 255th St", lat: 41.986268, lng: -94.701235},
+            {address: "8100 Wynnwood Rd", lat: 45.004807, lng: -93.383129},
+            {address: "206 Sunnyridge Cir", lat: 44.979189, lng: -93.329681},
+            {address: "1149 Orkla Dr", lat: 44.991418, lng: -93.385126},
+            {address: "22200 350th St", lat: 44.441461, lng: -92.587741},
+            {address: "2517 Avenue L", lat: 40.943965, lng: -100.149446},
+            {address: "3337 Kansas Ave", lat: 42.3057, lng: -94.203317},
+            {address: "3127 Brentwood Blvd", lat: 40.895398, lng: -98.373607},
+            {address: "4305 Blauvelt Rd", lat: 40.947592, lng: -98.413146},
+            {address: "402 Rosewood Cir", lat: 40.921337, lng: -98.398566},
+            {address: "1811 Crabapple Ln", lat: 41.75595, lng: -93.810195},
+            {address: "11320 NW 103rd Ct", lat: 41.766954, lng: -93.761985},
+            {address: "76085 Highway 61", lat: 40.855498, lng: -101.725144},
+            {address: "2833 Kent Ave", lat: 41.238883, lng: -94.511082},
+            {address: "8056 S 225th St", lat: 41.178956, lng: -96.269387},
+            {address: "23110 Harrison St", lat: 41.190467, lng: -96.277272},
+            {address: "10016 S 202nd St", lat: 41.159578, lng: -96.231289},
+            {address: "18422 Fairview Rd", lat: 41.109367, lng: -96.201323},
+            {address: "30414 130th St", lat: 45.817918, lng: -94.739703},
+            {address: "108 420th Ave", lat: 41.688078, lng: -92.764896},
+            {address: "1705 Sunset St", lat: 41.754767, lng: -92.737778},
+            {address: "179 Walnut Rd", lat: 41.681334, lng: -92.754636},
+            {address: "3852 20th St", lat: 41.738496, lng: -92.746667},
+            {address: "3535 Bunker Lake Blvd NE", lat: 45.226406, lng: -93.179507},
+            {address: "14835 Able St NE", lat: 45.240061, lng: -93.247198},
+            {address: "2402 Hamel Rd", lat: 45.036769, lng: -93.583895},
+            {address: "9901 Lily Pond Ln", lat: 45.134131, lng: -93.581351},
+            {address: "20890 93rd Ave N", lat: 45.124194, lng: -93.569041},
+            {address: "8400 Trail Haven Rd", lat: 45.107002, lng: -93.5842},
+            {address: "7993 220th St E", lat: 44.63208, lng: -92.944946},
+            {address: "2710 185th St", lat: 42.782339, lng: -94.108798},
+            {address: "1348 Oak Rd", lat: 41.702794, lng: -95.287125},
+            {address: "1203 Collins Ridge Rd", lat: 43.240126, lng: -91.160621},
+            {address: "47570 275th St", lat: 43.402826, lng: -96.693741},
+            {address: "27093 Fairway Cir", lat: 43.461228, lng: -96.605474},
+            {address: "27252 476th Ave", lat: 43.438323, lng: -96.68673},
+            {address: "47774 273rd St", lat: 43.431907, lng: -96.653652},
+            {address: "615 United Ave", lat: 43.445558, lng: -96.717308},
+            {address: "26477 463rd Ave", lat: 43.546862, lng: -96.950704},
+            {address: "46333 266th St", lat: 43.528125, lng: -96.944204},
+            {address: "46310 261st St", lat: 43.602161, lng: -96.948369},
+            {address: "46354 261st St", lat: 43.603256, lng: -96.939447},
+            {address: "26767 465th Ave", lat: 43.50485, lng: -96.911015},
+            {address: "46329 265th St", lat: 43.539898, lng: -96.944459},
+            {address: "46340 261st St", lat: 43.602083, lng: -96.942594},
+            {address: "46209 262nd St", lat: 43.586393, lng: -96.968612},
+            {address: "1410 Arapahoe Ave", lat: 40.601433, lng: -98.413079},
+            {address: "600 Foxrun", lat: 40.644918, lng: -98.389255},
+            {address: "5901 Pheasant Run Ave", lat: 40.641345, lng: -98.386718},
+            {address: "1103 Lochview Dr", lat: 40.595528, lng: -98.389877},
+            {address: "11355 230th St E", lat: 44.616469, lng: -92.876716},
+            {address: "1416 Riverbluff Dr", lat: 44.755849, lng: -92.880813},
+            {address: "17599 Kendel Ct", lat: 44.693303, lng: -92.877367},
+            {address: "1795 Greystone Rd", lat: 44.722352, lng: -92.89315},
+            {address: "20477 Kirby Ave S", lat: 44.651935, lng: -92.874043},
+            {address: "1128 22nd St", lat: 43.009707, lng: -96.479408},
+            {address: "30167 271st Ave", lat: 44.51363, lng: -93.800258},
+            {address: "87815 340th Ave", lat: 43.75963, lng: -95.39555},
+            {address: "29535 Old Lincoln Hwy", lat: 41.441278, lng: -95.870081},
+            {address: "2829 317th Ave", lat: 42.378773, lng: -91.175267},
+            {address: "7009 Gunsmith Rd", lat: 43.746672, lng: -91.624713},
+            {address: "6467 Road D", lat: 40.043708, lng: -97.524519},
+            {address: "45721 262nd St", lat: 43.586445, lng: -97.06499},
+            {address: "1824 Scenic Heights Ct SW", lat: 44.874896, lng: -94.419206},
+            {address: "165 Denver Ave SE", lat: 44.870654, lng: -94.366562},
+            {address: "385 Ottawa Ave SE", lat: 44.867504, lng: -94.358973},
+            {address: "815 Ballard Dr", lat: 41.902246, lng: -93.613898},
+            {address: "30688 Deer Dr", lat: 41.912163, lng: -93.594763},
+            {address: "813 Ashwood Dr", lat: 41.902211, lng: -93.59851},
+            {address: "6065 220th St", lat: 42.384924, lng: -95.426417},
+            {address: "1582 220th St", lat: 42.467685, lng: -91.966881},
+            {address: "8247 104th Ln", lat: 41.406438, lng: -93.609106},
+            {address: "12759 Ford Trl N", lat: 41.429367, lng: -93.562773},
+            {address: "2204 E 2nd Ave", lat: 41.358631, lng: -93.528167},
+            {address: "7961 143rd Ave", lat: 41.409377, lng: -93.534949},
+            {address: "113 Phillip Pl", lat: 41.37706, lng: -93.562705},
+            {address: "9586 170th Ave", lat: 41.384844, lng: -93.481463},
+            {address: "11120 J Ave", lat: 42.539909, lng: -93.300865},
+            {address: "14844 268th Ave", lat: 46.224192, lng: -93.406164},
+            {address: "1339 Ithaca Rd", lat: 41.110358, lng: -96.545145},
+            {address: "1320 Springfield Pkwy", lat: 43.627415, lng: -95.00181},
+            {address: "28732 38th St", lat: 43.974575, lng: -93.692305},
+            {address: "1389 Marquis Rd", lat: 42.642299, lng: -92.482042},
+            {address: "970 Wynstone Dr", lat: 42.521759, lng: -96.555308},
+            {address: "1205 W Lincoln Way", lat: 42.013884, lng: -94.393088},
+            {address: "2521 360th St", lat: 42.26736, lng: -93.676095},
+            {address: "5 Mallard Beach DR19B", lat: 40.690668, lng: -99.867316},
+            {address: "8301 Woodfield Rd", lat: 41.712791, lng: -93.712339},
+            {address: "5965 Dogwood Cir", lat: 41.668979, lng: -93.70826},
+            {address: "9533 Twin Eagles Dr", lat: 41.670903, lng: -93.750289},
+            {address: "9532 Woodland Dr", lat: 41.669495, lng: -93.750284},
+            {address: "8700 Stonepointe Ln", lat: 41.670633, lng: -93.738829},
+            {address: "8016 Huntingwood Ct", lat: 41.668736, lng: -93.727502},
+            {address: "6834 Peckham St", lat: 41.684576, lng: -93.745619},
+            {address: "8279 NW 54th Ave", lat: 41.658751, lng: -93.732498},
+            {address: "5501 Kings Row", lat: 41.660244, lng: -93.731311},
+            {address: "5800 Foxboro Rd", lat: 41.664715, lng: -93.725673},
+            {address: "8918 Daybreak Rd", lat: 41.723689, lng: -93.721389},
+            {address: "2900 W 168th St", lat: 44.706585, lng: -93.58044},
+            {address: "945 Bridle Creek Dr", lat: 44.651931, lng: -93.636209},
+            {address: "277 Hickory St", lat: 41.445078, lng: -91.701592},
+            {address: "1135 Paradise Ln", lat: 41.490853, lng: -91.673001},
+            {address: "1596 470th St SW", lat: 41.592201, lng: -91.770527},
+            {address: "1640 E 67th St", lat: 40.740687, lng: -99.057048},
+            {address: "7096 County Road P19", lat: 41.48479, lng: -96.256776},
+            {address: "16288 Cart Trl SW", lat: 45.836848, lng: -95.621755},
+            {address: "47385 Monkey Valley Holw", lat: 44.263529, lng: -93.025822},
+            {address: "1469 190th St", lat: 41.379963, lng: -91.854888},
+            {address: "7027 14th Ave", lat: 42.003807, lng: -92.221702},
+            {address: "2055 130th Pl", lat: 41.225244, lng: -93.100357},
+            {address: "1085 Harvest Way", lat: 44.4505, lng: -92.288141},
+            {address: "11314 12th St N", lat: 44.966506, lng: -92.876829},
+            {address: "925 Mark Ave N", lat: 44.961955, lng: -92.859763},
+            {address: "24363 Maple Dr", lat: 43.388063, lng: -93.509769},
+            {address: "1383 190th Ave", lat: 43.448176, lng: -95.212482},
+            {address: "20627 441st Ave", lat: 44.393778, lng: -97.395528},
+            {address: "205 Crescent Park Dr", lat: 42.306513, lng: -95.039046},
+            {address: "16837 Interlachen Ct", lat: 44.705492, lng: -93.23937},
+            {address: "19483 Jade Ln", lat: 44.66599, lng: -93.269049},
+            {address: "38050 County Road 11", lat: 44.152027, lng: -95.320456},
+            {address: "1356 Eric Ave", lat: 43.451594, lng: -96.417673},
+            {address: "43668 110th Ave", lat: 42.856287, lng: -94.895216},
+            {address: "1382 Carroll Ave", lat: 42.506335, lng: -96.270772},
+            {address: "1241 Ryder Cup Ct", lat: 42.80913, lng: -96.152479},
+            {address: "95 17th St SE", lat: 42.772637, lng: -96.16454},
+            {address: "100 16th St SE", lat: 42.773108, lng: -96.164586},
+            {address: "200 4th Ave SE", lat: 42.790399, lng: -96.160212},
+            {address: "38509 C44", lat: 42.692599, lng: -96.075331},
+            {address: "325 Plum Run", lat: 44.450297, lng: -93.899274},
+            {address: "16141 317th Ave", lat: 45.053444, lng: -99.822287},
+            {address: "1203 Scenic Pl", lat: 41.591891, lng: -90.35879},
+            {address: "2025 Eaton Ave", lat: 41.361086, lng: -92.78639},
+            {address: "11958 363rd Ave", lat: 45.655763, lng: -98.928631},
+            {address: "1908 Battle Green Ct", lat: 40.793051, lng: -99.759375},
+            {address: "75549 Road 440", lat: 40.778706, lng: -99.618571},
+            {address: "33063 240th St", lat: 40.696015, lng: -93.575054},
+            {address: "2059 125th St", lat: 42.173365, lng: -93.024113},
+            {address: "19779 623rd Ave", lat: 45.033288, lng: -94.520276},
+            {address: "20890 Prairie Trl", lat: 46.062495, lng: -94.344617},
+            {address: "407 8th St SW", lat: 45.973311, lng: -94.380039},
+            {address: "4013 Pikie Point Dr NE", lat: 46.950591, lng: -94.241386},
+            {address: "6888 Millersburg Blvd", lat: 44.434653, lng: -93.399585},
+            {address: "3705 County Road 19", lat: 45.043392, lng: -93.637488},
+            {address: "5860 110th St", lat: 41.150632, lng: -92.934977},
+            {address: "1521 County Highway 4", lat: 43.651227, lng: -96.168464},
+            {address: "211 W Veterans Dr", lat: 43.670254, lng: -96.211104},
+            {address: "1471 270th St", lat: 42.399378, lng: -94.830368},
+            {address: "26728 Sioux Trl", lat: 44.277438, lng: -93.801035},
+            {address: "24097 610th Ave", lat: 44.234117, lng: -93.848033},
+            {address: "18876 163rd Ave", lat: 42.514329, lng: -91.480582},
+            {address: "18500 228th St", lat: 42.457623, lng: -91.431957},
+            {address: "100 Callaway Ct", lat: 44.189509, lng: -93.958743},
+            {address: "131 Goodyear Ave", lat: 44.173692, lng: -93.981721},
+            {address: "3113 Buttercup Trl", lat: 44.153733, lng: -93.940064},
+            {address: "55707 195th Ln", lat: 44.109623, lng: -94.043134},
+            {address: "212 Tranquility Trl", lat: 44.149085, lng: -93.96007},
+            {address: "3209 220th St", lat: 42.473542, lng: -94.479821},
+            {address: "7849 Twin Lakes Rd", lat: 42.48753, lng: -94.632473},
+            {address: "7352 Berkshire Ct", lat: 45.088499, lng: -93.457593},
+            {address: "17592 81st Pl N", lat: 45.102615, lng: -93.503626},
+            {address: "12083 97th Ave N", lat: 45.131027, lng: -93.43433},
+            {address: "16389 82nd Pl N", lat: 45.104835, lng: -93.488281},
+            {address: "5825 Maple Ridge Dr", lat: 45.005175, lng: -93.672026},
+            {address: "8375 Pioneer Creek Rd", lat: 45.004274, lng: -93.735332},
+            {address: "17745 63rd St", lat: 42.085491, lng: -90.691547},
+            {address: "5959 D Ave", lat: 42.654337, lng: -95.799439},
+            {address: "619 480th St", lat: 42.822814, lng: -95.756187},
+            {address: "1520 Howard Ave", lat: 41.804756, lng: -92.075037},
+            {address: "115 S Charles Ave", lat: 41.789205, lng: -92.060828},
+            {address: "18640 Olinda Trl N", lat: 45.219263, lng: -92.826962},
+            {address: "505 Tieszen Dr", lat: 43.425816, lng: -97.252949},
+            {address: "4018 Brookside Dr", lat: 42.061636, lng: -91.585994},
+            {address: "3271 1st St", lat: 42.053855, lng: -91.608546},
+            {address: "1777 Martin Creek Rd", lat: 42.013028, lng: -91.537997},
+            {address: "3230 Silver Oak Trl", lat: 42.071403, lng: -91.578627},
+            {address: "4461 Quail Trail Dr", lat: 42.055836, lng: -91.560153},
+            {address: "1214 Westwood Dr", lat: 44.435015, lng: -95.810401},
+            {address: "805 Nuese Ln", lat: 44.43992, lng: -95.773929},
+            {address: "2001 Elmcrest Dr", lat: 42.023304, lng: -92.928021},
+            {address: "1167 Sanford Ave", lat: 42.181815, lng: -92.904902},
+            {address: "906 Benjamin Dr", lat: 42.016443, lng: -92.896749},
+            {address: "23584 42nd St", lat: 41.995239, lng: -91.338584},
+            {address: "43 Creekside Ct", lat: 43.151893, lng: -93.237032},
+            {address: "17616 245th St", lat: 43.119482, lng: -93.169258},
+            {address: "353 Willowbrook Dr", lat: 43.150165, lng: -93.22748},
+            {address: "5 Old Farm Rd", lat: 43.15512, lng: -93.169273},
+            {address: "1009 Park Ln", lat: 43.142524, lng: -93.180594},
+            {address: "106 Harvest Ct", lat: 43.057902, lng: -91.205021},
+            {address: "44204 230th Ave", lat: 46.655014, lng: -93.338286},
+            {address: "1169 Veronica Ln", lat: 44.886164, lng: -93.151799},
+            {address: "792 Upper Colonial Dr", lat: 44.899885, lng: -93.125663},
+            {address: "11957 Maple Lake Dr SE", lat: 47.642678, lng: -96.216513},
+            {address: "13423 Elmhurst Dr SE", lat: 47.651154, lng: -96.185872},
+            {address: "4948 M Ave", lat: 42.801175, lng: -95.622515},
+            {address: "503 Mayberry Pl", lat: 45.222067, lng: -96.603683},
+            {address: "16891 200th Ave", lat: 41.278423, lng: -93.423248},
+            {address: "235 W Lake Dr", lat: 45.453117, lng: -98.757843},
+            {address: "390 Nesbitt Dr", lat: 45.452252, lng: -98.730208},
+            {address: "986 H Rd", lat: 40.452925, lng: -99.011217},
+            {address: "31938 130th St", lat: 41.476517, lng: -95.937559},
+            {address: "1524 Sawgrass Ave", lat: 43.735351, lng: -98.046733},
+            {address: "136 N Harmon Dr", lat: 43.754288, lng: -98.039689},
+            {address: "40425 252nd St", lat: 43.731104, lng: -98.12135},
+            {address: "1362 235th St", lat: 41.667614, lng: -96.049266},
+            {address: "510 Big Foot Rd", lat: 43.140745, lng: -91.351378},
+            {address: "1207 Oak Dr", lat: 44.959326, lng: -95.725815},
+            {address: "8186 85th St NE", lat: 45.276355, lng: -93.72137},
+            {address: "9219 Jaber Ave NE", lat: 45.284303, lng: -93.708659},
+            {address: "117 Crescent Dr", lat: 42.233594, lng: -91.180347},
+            {address: "3303 Rivershore Dr", lat: 46.840832, lng: -96.77344},
+            {address: "4944 Crestview Rd", lat: 44.947615, lng: -93.64916},
+            {address: "815 16th Ave SW", lat: 41.920764, lng: -91.436475},
+            {address: "870 Glen Dr", lat: 42.490483, lng: -96.05993},
+            {address: "1570 235th St", lat: 40.967059, lng: -91.608265},
+            {address: "1571 Doyle St", lat: 40.940404, lng: -93.904408},
+            {address: "3128 Linden Ln", lat: 41.428921, lng: -91.083301},
+            {address: "1991 Bayfield Rd", lat: 41.467526, lng: -91.176368},
+            {address: "3505 A St", lat: 40.798514, lng: -95.965101},
+            {address: "1840 Needham Ave", lat: 42.52801, lng: -95.090034},
+            {address: "221 S Chestnut Ave", lat: 43.056323, lng: -92.31548},
+            {address: "8316 29th Ave N", lat: 45.010865, lng: -93.386143},
+            {address: "17103 County Road 9 NE", lat: 45.289507, lng: -94.957223},
+            {address: "2462 260th St", lat: 40.929203, lng: -91.435885},
+            {address: "301 Grand View Ct", lat: 44.575871, lng: -93.516668},
+            {address: "1654 Fisher Ave", lat: 41.412878, lng: -92.757775},
+            {address: "23433 18th Ave", lat: 41.184984, lng: -93.774808},
+            {address: "13712 380th St NW", lat: 48.430869, lng: -96.336426},
+            {address: "1463 W 62nd St N", lat: 41.713409, lng: -93.140361},
+            {address: "84598 546th Ave", lat: 42.091048, lng: -97.60062},
+            {address: "2302 Sunset Dr", lat: 41.124466, lng: -100.790682},
+            {address: "920 S Carr Ave", lat: 41.125726, lng: -100.787132},
+            {address: "2213 Hidden Valley Rd", lat: 44.436193, lng: -93.178729},
+            {address: "7110 Farmer Trl", lat: 44.362655, lng: -93.159319},
+            {address: "2191 90th St E", lat: 44.456614, lng: -93.260311},
+            {address: "7803 30th Ave", lat: 41.413382, lng: -93.751208},
+            {address: "550 Legacy Ct Unit 9", lat: 41.487118, lng: -93.681492},
+            {address: "4835 Lakewood Dr", lat: 41.502297, lng: -93.685686},
+            {address: "6905 61st Ln", lat: 41.425474, lng: -93.690284},
+            {address: "11670 County Road 52", lat: 44.688232, lng: -93.821169},
+            {address: "18220 Cedar Dr NW", lat: 45.301032, lng: -93.286315},
+            {address: "518 Holly Ln N", lat: 44.954785, lng: -92.943494},
+            {address: "640 Road East 40", lat: 41.04524, lng: -101.625452},
+            {address: "7009 Lake Shore Dr", lat: 43.413006, lng: -95.162027},
+            {address: "44368 216th St", lat: 44.249612, lng: -97.336459},
+            {address: "3694 White Bridge Rd NW", lat: 44.171969, lng: -92.518011},
+            {address: "1686 Sattre Rd NW", lat: 44.13602, lng: -92.486549},
+            {address: "33651 Kite Ave", lat: 43.252177, lng: -92.816684},
+            {address: "1693 Elk Horn Dr", lat: 41.444208, lng: -93.026758},
+            {address: "14910 91st St NE", lat: 45.283713, lng: -93.583007},
+            {address: "41440 County Highway 1", lat: 46.439065, lng: -95.627095},
+            {address: "13438 Copperhead Rd", lat: 40.937283, lng: -92.418888},
+            {address: "9937 82nd St", lat: 41.008271, lng: -92.35173},
+            {address: "3976 Dane Rd", lat: 44.103046, lng: -93.15513},
+            {address: "1743 Lower Old Highway 6 Rd NW", lat: 41.724937, lng: -91.76007},
+            {address: "4715 Panorama Dr", lat: 41.722338, lng: -94.405614},
+            {address: "4938 Jule Dr", lat: 41.715565, lng: -94.393785},
+            {address: "12705 S 81st St", lat: 41.119734, lng: -96.0382},
+            {address: "11206 Kentucky Rd", lat: 41.14824, lng: -96.008813},
+            {address: "27731 447th Ave", lat: 43.367777, lng: -97.264818},
+            {address: "40506 273rd St", lat: 43.427768, lng: -98.094223},
+            {address: "5313 500th St", lat: 42.923534, lng: -95.737726},
+            {address: "18575 244th Ave", lat: 45.391516, lng: -94.612809},
+            {address: "45165 Crystal Hills Dr", lat: 46.61745, lng: -95.934617},
+            {address: "1139 Cordova Ave", lat: 41.489637, lng: -92.820138},
+            {address: "683 218th Pl", lat: 41.424509, lng: -92.939774},
+            {address: "431 210th Ave", lat: 41.46065, lng: -92.948691},
+            {address: "530 228th Pl", lat: 41.448104, lng: -92.899723},
+            {address: "1776 Erbe St", lat: 41.436074, lng: -93.009173},
+            {address: "711 210th Ave", lat: 41.419284, lng: -92.948684},
+            {address: "2515 Scholte Straat", lat: 41.387444, lng: -92.952082},
+            {address: "1659 Castle Cor", lat: 41.412067, lng: -92.826786},
+            {address: "1933 Goldenrod Dr", lat: 41.403707, lng: -92.984642},
+            {address: "1311 Boone St", lat: 41.414763, lng: -92.921064},
+            {address: "16668 Thunder Ridge Dr", lat: 42.455426, lng: -90.814668},
+            {address: "6404 17th Ave SW", lat: 46.573845, lng: -94.372332},
+            {address: "43680 Mosquito Heights Rd", lat: 46.59494, lng: -95.511318},
+            {address: "44876 Plentywood Rd", lat: 46.502961, lng: -95.555516},
+            {address: "45664 440th St", lat: 46.599983, lng: -95.540108},
+            {address: "44810 N Little Pine Rd", lat: 46.648809, lng: -95.558837},
+            {address: "18014 180th Ln", lat: 41.774242, lng: -94.090183},
+            {address: "18317 160th St", lat: 41.807691, lng: -94.118853},
+            {address: "356 332nd Pl", lat: 41.871278, lng: -94.09496},
+            {address: "45 335th St", lat: 41.870993, lng: -94.155551},
+            {address: "369 332nd Pl", lat: 41.873261, lng: -94.09288},
+            {address: "4511 30th Ave", lat: 42.865224, lng: -95.348816},
+            {address: "1260 460th St", lat: 42.983638, lng: -95.337007},
+            {address: "23219 Ponderosa Dr", lat: 44.046063, lng: -101.630722},
+            {address: "16063 Golden Valley Dr", lat: 44.23321, lng: -103.251267},
+            {address: "29060 203rd St", lat: 44.441822, lng: -100.335086},
+            {address: "29523 206th St", lat: 44.39425, lng: -100.246175},
+            {address: "312 S Lincoln Ave", lat: 44.361442, lng: -100.320158},
+            {address: "29215 Prairie Pl", lat: 44.421809, lng: -100.304738},
+            {address: "1109 Lakewood Dr", lat: 44.375549, lng: -100.367074},
+            {address: "1006 W 2nd St", lat: 44.376861, lng: -100.360676},
+            {address: "1353 Lee Ave", lat: 42.509382, lng: -95.920962},
+            {address: "16425 Norwood Ln", lat: 45.849591, lng: -92.939132},
+            {address: "6811 Indian Trail Ln", lat: 46.745351, lng: -94.396546},
+            {address: "6420 Ranch Rd", lat: 41.031295, lng: -96.011802},
+            {address: "14535 Fir Cir", lat: 40.990373, lng: -95.993444},
+            {address: "5955 Cardinal Ct", lat: 41.589167, lng: -93.493208},
+            {address: "12410 43rd Ave N", lat: 45.033862, lng: -93.438493},
+            {address: "3320 Saratoga Ln N", lat: 45.018258, lng: -93.411827},
+            {address: "3220 Minnesota Ln N", lat: 45.017228, lng: -93.468351},
+            {address: "23108 Vine Ave", lat: 43.229194, lng: -93.084165},
+            {address: "205 4th Ave SW", lat: 42.728703, lng: -94.672124},
+            {address: "15820 NW 58th St", lat: 41.850374, lng: -93.69868},
+            {address: "4101 NW 94th Ave", lat: 41.732557, lng: -93.673545},
+            {address: "783 Yellow River Dr", lat: 43.162189, lng: -91.47242},
+            {address: "20606 Nevada Ave", lat: 44.650976, lng: -93.372308},
+            {address: "4521 Idaho St", lat: 41.384588, lng: -93.721428},
+            {address: "13387 R45 Hwy", lat: 41.368045, lng: -93.703126},
+            {address: "6627 S 85th Ave", lat: 41.193146, lng: -96.045809},
+            {address: "22722 448th Ave", lat: 44.093393, lng: -97.248812},
+            {address: "5770 145th Ct NW", lat: 45.233256, lng: -93.413546},
+            {address: "10345 240th St", lat: 46.10646, lng: -94.445318},
+            {address: "6004 Wind River Rd", lat: 44.017788, lng: -103.288314},
+            {address: "6573 Wellington Ct", lat: 44.020214, lng: -103.240469},
+            {address: "923 Alta Vista Dr", lat: 44.047162, lng: -103.235391},
+            {address: "3434 Gray Fox Ct", lat: 44.051849, lng: -103.229109},
+            {address: "13170 Geary Blvd", lat: 44.103024, lng: -103.424012},
+            {address: "1115 Duffer Dr", lat: 43.980783, lng: -103.244103},
+            {address: "5375 Cleghorn Canyon Rd", lat: 44.056987, lng: -103.308571},
+            {address: "5027 Carriage Hills Dr", lat: 44.0341, lng: -103.287002},
+            {address: "1247 Settlers Creek Pl", lat: 44.0888, lng: -103.238951},
+            {address: "5325 Carriage Hills Pl", lat: 44.032983, lng: -103.284129},
+            {address: "18800 NW 70th St", lat: 40.998829, lng: -96.810187},
+            {address: "4687 Ranch Ave", lat: 41.554757, lng: -93.003785},
+            {address: "1329 Central Ave", lat: 44.554203, lng: -92.533358},
+            {address: "129 Eastgate Dr", lat: 42.319727, lng: -92.58938},
+            {address: "25755 Lindbergh Ave", lat: 43.65181, lng: -96.713082},
+            {address: "3149 Canfield Ave", lat: 41.895004, lng: -93.193952},
+            {address: "22684 246th Ave", lat: 45.450903, lng: -94.619146},
+            {address: "3241 170th St", lat: 41.410459, lng: -91.512535},
+            {address: "2929 150th St", lat: 41.438681, lng: -91.575125},
+            {address: "3060 Bayertown Rd SW", lat: 41.543722, lng: -91.630796},
+            {address: "550 Timber Oak Ct", lat: 42.07276, lng: -91.654857},
+            {address: "2131 Century Hills Ct NE", lat: 44.046876, lng: -92.418597},
+            {address: "967 Skyline Ln SW", lat: 44.012353, lng: -92.488456},
+            {address: "1135 Chippewa Dr NW", lat: 44.096712, lng: -92.47845},
+            {address: "1520 5th St SW", lat: 44.017756, lng: -92.486276},
+            {address: "543 Boulder Rd SE", lat: 43.957753, lng: -92.455173},
+            {address: "2253 Baihly Ln SW", lat: 43.998258, lng: -92.49563},
+            {address: "1226 19th Ave NE", lat: 44.035433, lng: -92.442319},
+            {address: "5827 Salem Rd SW", lat: 43.995673, lng: -92.552878},
+            {address: "906 39th St SW", lat: 43.965544, lng: -92.477014},
+            {address: "4444 60th Ave SW", lat: 43.957212, lng: -92.555994},
+            {address: "2226 58th St NW", lat: 44.082648, lng: -92.495648},
+            {address: "703 73rd St NW", lat: 44.10368, lng: -92.46888},
+            {address: "4095 8th St SW", lat: 44.014638, lng: -92.524403},
+            {address: "815 Bristol Ln NE", lat: 44.060022, lng: -92.447736},
+            {address: "1008 S 12th Ave", lat: 43.418762, lng: -96.178221},
+            {address: "3176 Eagle Ave", lat: 43.188767, lng: -96.314564},
+            {address: "2045 310th St", lat: 43.199532, lng: -96.383361},
+            {address: "36829 175th St", lat: 44.847339, lng: -98.82148},
+            {address: "62277 130th St", lat: 42.167822, lng: -93.457973},
+            {address: "809 Main Ave S", lat: 48.837099, lng: -95.763931},
+            {address: "13273 Derryglenn Ct", lat: 44.756697, lng: -93.154157},
+            {address: "4194 143rd St W", lat: 44.741851, lng: -93.150455},
+            {address: "115 Johnsen Rd", lat: 43.621508, lng: -95.795508},
+            {address: "1222 Highway 105", lat: 43.414602, lng: -92.982903},
+            {address: "3356 265th St", lat: 41.270808, lng: -93.798744},
+            {address: "2309 Timber Ridge Ave", lat: 41.316238, lng: -93.875666},
+            {address: "822 Pierz Pl", lat: 45.523726, lng: -94.156865},
+            {address: "415 Laura Ln SE", lat: 45.206665, lng: -93.6577},
+            {address: "5244 Nelmark Ave NE", lat: 45.227995, lng: -93.604533},
+            {address: "14755 45th St NE", lat: 45.221101, lng: -93.587706},
+            {address: "3100 Hamlin Ave NE", lat: 45.196845, lng: -93.732882},
+            {address: "1555 Edgcumbe Rd", lat: 44.917701, lng: -93.152333},
+            {address: "1731 Scheffer Ave", lat: 44.921804, lng: -93.17347},
+            {address: "200 Earl St", lat: 44.947805, lng: -93.054553},
+            {address: "25523 437th Ave", lat: 43.685143, lng: -97.470846},
+            {address: "24894 470th Ave", lat: 44.124248, lng: -95.14063},
+            {address: "11899 Adobe Trl", lat: 45.803149, lng: -94.980194},
+            {address: "539 Elm St N", lat: 45.747987, lng: -94.955374},
+            {address: "5208 Edgewater Dr", lat: 44.728965, lng: -93.345567},
+            {address: "5649 River Oak Dr", lat: 44.732803, lng: -93.35146},
+            {address: "1186 Road D", lat: 41.445755, lng: -97.041265},
+            {address: "1119 Road G", lat: 41.48136, lng: -97.057324},
+            {address: "1624 5th Ave", lat: 41.8631, lng: -103.656328},
+            {address: "615 Winfield Cir", lat: 42.38801, lng: -96.35984},
+            {address: "1888 Karol Kay Blvd", lat: 40.92439, lng: -97.082371},
+            {address: "19405 310th St", lat: 45.397514, lng: -92.710633},
+            {address: "1121 Scott St S", lat: 44.78676, lng: -93.5289},
+            {address: "15096 Zumbro Ave", lat: 44.731037, lng: -93.552386},
+            {address: "2800 133rd St W", lat: 44.758554, lng: -93.57644},
+            {address: "1271 6th Ave W", lat: 44.791703, lng: -93.542252},
+            {address: "13839 T Rd", lat: 41.299429, lng: -97.444928},
+            {address: "3516 Nettle Ave", lat: 43.139327, lng: -95.801355},
+            {address: "3112 65th St", lat: 42.079924, lng: -91.891081},
+            {address: "1885 E Ave", lat: 40.773442, lng: -95.289886},
+            {address: "1275 Silverthorn Dr", lat: 45.112225, lng: -93.155194},
+            {address: "105 E Marion St", lat: 41.332597, lng: -92.204666},
+            {address: "6572 Kings Barn Ct", lat: 42.471097, lng: -96.338435},
+            {address: "2719 Jackson St", lat: 42.5189, lng: -96.402708},
+            {address: "5401 Broken Kettle Rd", lat: 42.55933, lng: -96.444818},
+            {address: "303 Jamie Cir", lat: 45.663191, lng: -97.03891},
+            {address: "102 10th Ave", lat: 41.873274, lng: -93.679061},
+            {address: "1520 111th St", lat: 44.007757, lng: -95.759438},
+            {address: "22170 Heritage Rd", lat: 44.287646, lng: -94.632145},
+            {address: "1981 White Oak Ave NE", lat: 41.787467, lng: -91.400471},
+            {address: "16752 105th St NW", lat: 45.30507, lng: -94.236964},
+            {address: "110 N Tinton Rd", lat: 44.477533, lng: -103.889011},
+            {address: "7924 Duke Pkwy", lat: 44.485317, lng: -103.731014},
+            {address: "2370 Highway 18", lat: 43.126094, lng: -95.118784},
+            {address: "16097 Iowa City Rd", lat: 40.914754, lng: -91.179945},
+            {address: "12168 Indian Beach Rd", lat: 45.237622, lng: -94.881198},
+            {address: "12050 21st St NE", lat: 45.239645, lng: -95.015817},
+            {address: "25772 168th St", lat: 43.403599, lng: -95.06757},
+            {address: "1676 280th Ave", lat: 43.404064, lng: -95.032644},
+            {address: "12903 Kelly St", lat: 41.109344, lng: -96.115161},
+            {address: "20203 S 192nd St", lat: 41.027752, lng: -96.216056},
+            {address: "18909 Pflug Rd", lat: 41.073997, lng: -96.211834},
+            {address: "1042 Paralta Rd", lat: 42.026242, lng: -91.468409},
+            {address: "2032 Flag Ave S", lat: 44.963261, lng: -93.396742},
+            {address: "8261 Westwood Hills Curv", lat: 44.96263, lng: -93.386206},
+            {address: "6705 231st Ln NE", lat: 45.389379, lng: -93.097456},
+            {address: "1015 230th St", lat: 42.022805, lng: -93.227742},
+            {address: "9897 83rd St N", lat: 45.068168, lng: -92.905722},
+            {address: "5160 Novak Ave N", lat: 45.024009, lng: -92.830929},
+            {address: "1103 3rd St S", lat: 45.046225, lng: -92.805965},
+            {address: "6380 Lake Elmo Ave N", lat: 45.042822, lng: -92.884451},
+            {address: "5121 Neal Ave N", lat: 45.024551, lng: -92.838658},
+            {address: "10104 Mendel Rd N", lat: 45.095241, lng: -92.854326},
+            {address: "9426 Lansing Ave N", lat: 45.085799, lng: -92.879538},
+            {address: "1269 Weaver Ave", lat: 41.557768, lng: -90.832142},
+            {address: "1241 570th St", lat: 42.692096, lng: -95.162384},
+            {address: "16 Saint Andrews Dr", lat: 42.667862, lng: -95.267948},
+            {address: "918 Forest Ave", lat: 42.192345, lng: -93.585824},
+            {address: "13263 Pleasant Valley Rd", lat: 44.334465, lng: -103.393216},
+            {address: "1405 Pine View Dr", lat: 44.387369, lng: -103.515517},
+            {address: "13599 207th St", lat: 44.394812, lng: -103.337619},
+            {address: "44135 Highway 40", lat: 40.968363, lng: -99.589682},
+            {address: "22081 110th St NW", lat: 45.336032, lng: -95.193401},
+            {address: "120 Salem Church Rd", lat: 44.868921, lng: -93.091141},
+            {address: "1761 Plotz Rd NW", lat: 41.822952, lng: -91.75562},
+            {address: "1293 Southview Ln NE", lat: 41.840862, lng: -91.644294},
+            {address: "1753 Plotz Rd NW", lat: 41.822518, lng: -91.758174},
+            {address: "16536 Wild Mountain Rd", lat: 45.498724, lng: -92.770965},
+            {address: "410 S James Ave", lat: 43.448523, lng: -96.830933},
+            {address: "46982 273rd St", lat: 43.433191, lng: -96.810145},
+            {address: "728 Croell Ave", lat: 41.712136, lng: -91.656999},
+            {address: "10000 Deer Valley Dr", lat: 42.074836, lng: -91.749455},
+            {address: "2260 I Ave", lat: 42.114017, lng: -92.610588},
+            {address: "300 E Hollett St", lat: 44.236368, lng: -95.609955},
+            {address: "340 4th St E", lat: 44.233128, lng: -95.607868},
+            {address: "29480 Delta Ave", lat: 41.267887, lng: -95.622824},
+            {address: "2305 Main St", lat: 42.999274, lng: -97.862606},
+            {address: "27496 160th Ave N", lat: 47.084204, lng: -96.229474},
+            {address: "494 N 20th Rd", lat: 40.695174, lng: -96.269726},
+            {address: "9100 Greenbelt Dr", lat: 41.642502, lng: -93.74372},
+            {address: "4619 154th St", lat: 41.644796, lng: -93.830539},
+            {address: "15814 Brookview Dr", lat: 41.651482, lng: -93.837606},
+            {address: "14105 Hickman Rd", lat: 41.616828, lng: -93.812777},
+            {address: "3703 133rd St", lat: 41.625094, lng: -93.801998},
+            {address: "3323 146th Cir", lat: 41.626588, lng: -93.81929},
+            {address: "3985 Woodview Dr", lat: 45.060758, lng: -93.08919},
+            {address: "28711 State St", lat: 41.334992, lng: -96.367098},
+            {address: "325 4th Ave", lat: 41.527838, lng: -93.957051},
+            {address: "1271 Old Portland Rd", lat: 41.464623, lng: -93.974013},
+            {address: "3011 260th St", lat: 43.140446, lng: -93.457065},
+            {address: "31079 467th Ave", lat: 42.884178, lng: -96.866931},
+            {address: "46113 Timber Rd", lat: 42.78248, lng: -96.980896},
+            {address: "31037 466th Ave", lat: 42.889978, lng: -96.885131},
+            {address: "1500 Rockwell Trl", lat: 42.854124, lng: -96.973318},
+            {address: "29167 Sd Highway 19", lat: 43.160942, lng: -97.083647},
+            {address: "8237 Narcissus St", lat: 44.85555, lng: -93.651989},
+            {address: "8788 Horizon Rdg", lat: 44.84714, lng: -93.66863},
+            {address: "43432 180th St", lat: 44.775773, lng: -97.524684},
+            {address: "5583 30th Ave", lat: 42.213247, lng: -91.910517},
+            {address: "1808 S 1st Ave", lat: 42.154364, lng: -92.024675},
+            {address: "2397 55th St", lat: 42.224921, lng: -92.026965},
+            {address: "67978 County Road 76", lat: 44.365202, lng: -91.978527},
+            {address: "11350 N Shore Rd", lat: 44.877457, lng: -93.811008},
+            {address: "8085 Laketown Rd", lat: 44.85778, lng: -93.710534},
+            {address: "255 Lakeview Terrace Blvd", lat: 44.861619, lng: -93.797572},
+            {address: "43142 County Highway 75", lat: 46.591281, lng: -95.164002},
+            {address: "1503 Lincoln Cir SW", lat: 46.42892, lng: -95.15435},
+            {address: "1550 County Road G", lat: 41.14801, lng: -96.59222},
+            {address: "1860 County Road L", lat: 41.221616, lng: -96.651734},
+            {address: "917 County Road 15", lat: 41.135413, lng: -96.582916},
+            {address: "45684 301st St", lat: 43.027402, lng: -97.063665},
+            {address: "45307 300th St", lat: 43.038013, lng: -97.139215},
+            {address: "20816 74th Ave", lat: 41.608506, lng: -90.760932},
+            {address: "8261 New Liberty Rd", lat: 41.652093, lng: -90.740361},
+            {address: "6228 Campfire Bend Rd NW", lat: 47.115781, lng: -94.613111},
+            {address: "2241 420th Ave", lat: 43.320564, lng: -94.759846},
+            {address: "13825 320th Ave NW", lat: 48.076659, lng: -96.738605},
+            {address: "24602 Jones Cir", lat: 41.251508, lng: -96.301301},
+            {address: "3617 S 252nd St", lat: 41.225159, lng: -96.309819},
+            {address: "1020 4th Ave SW", lat: 44.896712, lng: -97.134075},
+            {address: "1214 6th St NW", lat: 44.916995, lng: -97.125271},
+            {address: "14830 County Road 20", lat: 44.965762, lng: -93.900432},
+            {address: "4375 County Road 10 N", lat: 44.924437, lng: -93.823936},
+            {address: "106 E Lakeshore Dr", lat: 45.343074, lng: -97.303141},
+            {address: "31399 Chardonnay Pt", lat: 41.536435, lng: -93.877735},
+            {address: "73125 347 Ave", lat: 40.425224, lng: -101.372038},
+            {address: "1420 Cedar River Dr", lat: 42.740724, lng: -92.483417},
+            {address: "1635 Hawthorne Ave", lat: 42.812907, lng: -92.415902},
+            {address: "1354 190th St", lat: 42.773675, lng: -92.484513},
+            {address: "1387 195th St", lat: 42.766576, lng: -92.476338},
+            {address: "2111 3rd St SW", lat: 42.7045, lng: -92.472619},
+            {address: "1701 5th St NE", lat: 42.741408, lng: -92.465744},
+            {address: "1310 Dalton Dr", lat: 42.737802, lng: -92.488927},
+            {address: "16663 Meadowbrook Ln", lat: 44.949011, lng: -93.487052},
+            {address: "4171 Hunters Ln", lat: 44.570918, lng: -93.437235},
+            {address: "3825 Dalton Ave", lat: 44.53285, lng: -93.341482},
+            {address: "2003 Beach St", lat: 42.456, lng: -93.835559},
+            {address: "1801 Kantor Ave", lat: 42.528677, lng: -93.779318},
+            {address: "23385 461st Ave", lat: 43.99487, lng: -96.994614},
+            {address: "23119 459th Ave", lat: 44.033528, lng: -97.030245},
+            {address: "23775 461A Ave", lat: 43.939733, lng: -96.987576},
+            {address: "239 290th St", lat: 41.671331, lng: -91.319762},
+            {address: "2381 Baker Ave", lat: 41.600694, lng: -91.346732},
+            {address: "1876 Delta Ave", lat: 41.674353, lng: -91.307408},
+            {address: "13385 Washington Rd", lat: 40.836476, lng: -91.187055},
+            {address: "823 E Decatur St", lat: 41.842595, lng: -96.703136},
+            {address: "936 Beemer Cir", lat: 41.839391, lng: -96.700795},
+            {address: "1239 H Rd", lat: 41.839974, lng: -96.800871},
+            {address: "2351 Yankee Rd", lat: 41.800559, lng: -90.907866},
+            {address: "5707 Fisher St", lat: 45.114345, lng: -93.04369},
+            {address: "2381 I Ave", lat: 41.661841, lng: -92.145189},
+            {address: "2896 J Ave", lat: 41.583274, lng: -92.122394},
+            {address: "300 Westwood Rd", lat: 41.661971, lng: -92.025101},
+            {address: "4660 60th St SW", lat: 45.079336, lng: -95.124705},
+            {address: "1016 73rd Ave NW", lat: 45.193889, lng: -95.055551},
+            {address: "4720 15th St NW", lat: 45.170155, lng: -95.063383},
+            {address: "43857 225th St", lat: 44.124009, lng: -97.438576},
+            {address: "709 Wilson St", lat: 43.371666, lng: -99.849158},
+            {address: "1681 State Highway 92", lat: 41.330318, lng: -94.11374},
+            {address: "615 W Benton St", lat: 41.340243, lng: -94.021166},
+            {address: "109 Northwest Dr", lat: 41.405387, lng: -94.891769},
+            {address: "592 X Rd", lat: 42.076561, lng: -96.924985},
+            {address: "2136 530th St", lat: 44.707358, lng: -95.580164},
+            {address: "3088 Leyland Trl", lat: 44.90524, lng: -92.9158},
+            {address: "8985 Highland Cir", lat: 44.916635, lng: -92.924751},
+            {address: "2398 O Ave", lat: 41.864395, lng: -93.885204},
+            {address: "2178 M Ave", lat: 41.895919, lng: -93.929611},
+            {address: "181 Kniest Ave", lat: 42.872547, lng: -97.525541},
+            {address: "2829 N Francis St", lat: 42.902343, lng: -97.389967},
+            {address: "518 W 16th St", lat: 42.884386, lng: -97.39944},
+            {address: "613 Applewood Dr", lat: 42.903064, lng: -97.381761},
+            {address: "724 W Walnut St", lat: 40.861122, lng: -97.601444},
+            {address: "151 Beech Ave", lat: 40.863066, lng: -97.580673}
         ];
 
-        function searchFarmAddress(searchText) {
+        async function searchFarmAddress(searchText) {
+            // Verify map is initialized
+            if (!map || typeof map.setMapTypeId !== 'function') {
+                throw new Error('Map not initialized properly');
+            }
+
+            // Verify Google Maps is loaded
+            if (!window.google || !window.google.maps) {
+                throw new Error('Google Maps not loaded properly');
+            }
+
+            // Validate search text
+            if (!searchText || typeof searchText !== 'string') {
+                throw new Error('Invalid search text provided');
+            }
+            
             const search = searchText.toLowerCase().trim();
-            return farmLocations.find(loc => 
-                loc.address.toLowerCase().includes(search)
+            if (!search) {
+                throw new Error('Please enter a search term');
+            }
+
+            // Search for location
+            const foundLocation = farmLocations.find(loc => 
+                loc && loc.address && loc.address.toLowerCase().includes(search)
             );
+            
+            if (foundLocation) {
+                // Clear previous marker and info window if they exist
+                if (currentMarker) {
+                    currentMarker.setMap(null);
+                }
+                if (currentInfoWindow) {
+                    currentInfoWindow.close();
+                }
+                
+                // Create a new marker
+                currentMarker = new google.maps.Marker({
+                    map: map,
+                    position: { lat: foundLocation.lat, lng: foundLocation.lng },
+                    animation: google.maps.Animation.DROP
+                });
+
+                // Create and open info window
+                currentInfoWindow = new google.maps.InfoWindow({
+                    content: `<div class="info-window">${foundLocation.address}</div>`
+                });
+                currentInfoWindow.open(map, currentMarker);
+
+                // Center and zoom the map
+                map.setCenter({ lat: foundLocation.lat, lng: foundLocation.lng });
+                map.setZoom(18);
+            }
+            
+            return foundLocation;
         }
 
-        function geocodeAddress(address, map) {
+        function geocodeAddress(address) {
+            if (!map) {
+                return Promise.reject('Map is not ready yet. Please try again in a moment.');
+            }
+
+            if (!google || !google.maps) {
+                return Promise.reject('Google Maps is not loaded. Please refresh the page.');
+            }
+            
             // First try to find the address in our farm locations
             const farmLocation = searchFarmAddress(address);
             if (farmLocation) {
                 const location = { lat: farmLocation.lat, lng: farmLocation.lng };
+                
+                // Verify map is initialized
+                if (!map || typeof map.setMapTypeId !== 'function') {
+                    throw new Error('Map not properly initialized');
+                }
+                
+                // Set map options
+                map.setMapTypeId('hybrid');
+                map.setCenter(location);
+                map.setZoom(18);  // Zoom level for clear farm/property view
+                
+                // Create a marker at the location
+                const marker = new google.maps.Marker({
+                    map: map,
+                    position: location,
+                    animation: google.maps.Animation.DROP
+                });
+
+                // Create an info window with the address
+                const infoWindow = new google.maps.InfoWindow({
+                    content: `<div class="info-window">${farmLocation.address}</div>`
+                });
+
+                // Open the info window when marker is clicked
+                marker.addListener('click', () => {
+                    infoWindow.open(map, marker);
+                });
+
+                // Open info window immediately
+                infoWindow.open(map, marker);
+                
                 return Promise.resolve(location);
             }
 
@@ -133,35 +1208,39 @@
             const geocoder = new google.maps.Geocoder();
             return new Promise((resolve, reject) => {
                 geocoder.geocode({ address: address }, (results, status) => {
-                    if (status === 'OK') {
+                    if (status === 'OK' && results && results[0]) {
                         const location = results[0].geometry.location;
                         
-                        // Set to satellite with labels (hybrid mode)
-                        map.setMapTypeId('hybrid');
-                        map.setCenter(location);
-                        map.setZoom(18);  // Zoom level for clear farm/property view
+                        try {
+                            // Set to satellite with labels (hybrid mode)
+                            map.setMapTypeId('hybrid');
+                            map.setCenter(location);
+                            map.setZoom(18);  // Zoom level for clear farm/property view
                         
-                        // Create a marker at the location
-                        const marker = new google.maps.Marker({
-                            map: map,
-                            position: location,
-                            animation: google.maps.Animation.DROP
-                        });
+                            // Create a marker at the location
+                            const marker = new google.maps.Marker({
+                                map: map,
+                                position: location,
+                                animation: google.maps.Animation.DROP
+                            });
 
-                        // Create an info window with the address
-                        const infoWindow = new google.maps.InfoWindow({
-                            content: `<div class="info-window">${address}</div>`
-                        });
+                            // Create an info window with the address
+                            const infoWindow = new google.maps.InfoWindow({
+                                content: `<div class="info-window">${address}</div>`
+                            });
 
-                        // Open the info window when marker is clicked
-                        marker.addListener('click', () => {
+                            // Open the info window when marker is clicked
+                            marker.addListener('click', () => {
+                                infoWindow.open(map, marker);
+                            });
+
+                            // Open info window immediately
                             infoWindow.open(map, marker);
-                        });
-
-                        // Open info window immediately
-                        infoWindow.open(map, marker);
-                        
-                        resolve(location);
+                            
+                            resolve(location);
+                        } catch (error) {
+                            reject('Error setting up map view: ' + error);
+                        }
                     } else {
                         reject('Geocoding failed: ' + status);
                     }
@@ -206,10 +1285,15 @@
         }
 
         function initMap() {
+            if (!google || !google.maps) {
+                console.error('Google Maps not loaded');
+                return;
+            }
+
             const urlParams = getUrlParams();
             
             // Create the map
-            const map = new google.maps.Map(document.getElementById('map'), {
+            map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 18,  // Default zoom level for property view
                 center: { lat: 43.0, lng: -95.0 },  // Roughly center of coverage area
                 maxZoom: 19,  // Limit maximum zoom to maintain image quality
@@ -230,6 +1314,25 @@
             // Force satellite view after initialization
             map.setMapTypeId('satellite');
 
+            // Add search button click handler
+            document.getElementById('search-button').addEventListener('click', () => {
+                const searchBox = document.getElementById('search-box');
+                const address = searchBox.value;
+                if (address) {
+                    geocodeAddress(address, map);
+                }
+            });
+            
+            // Add enter key handler for the search box
+            document.getElementById('search-box').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const address = e.target.value;
+                    if (address) {
+                        geocodeAddress(address, map);
+                    }
+                }
+            });
+
             // Handle URL parameters for location
             if (urlParams.address) {
                 geocodeAddress(urlParams.address, map)
@@ -248,6 +1351,25 @@
             const BATCH_SIZE = 50;
             let processedCount = 0;
             
+            // Add search button click handler
+            document.getElementById('search-button').addEventListener('click', () => {
+                const searchBox = document.getElementById('search-box');
+                const address = searchBox.value;
+                if (address) {
+                    geocodeAddress(address, map);
+                }
+            });
+            
+            // Add enter key handler for the search box
+            document.getElementById('search-box').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const address = e.target.value;
+                    if (address) {
+                        geocodeAddress(address, map);
+                    }
+                }
+            });
+
             function processBatch() {
                 const batch = locations.slice(processedCount, processedCount + BATCH_SIZE);
                 
@@ -318,10 +1440,123 @@
             processBatch();
         }
 
-        // Initialize the map when the page loads
-        window.onload = function() {
-            initMap();
+        // Handle address search
+        async function searchAddress() {
+            const loadingDiv = document.getElementById('loading');
             
+            try {
+                // Wait for map to be ready
+                if (!window.google || !window.google.maps) {
+                    alert('Please wait for Google Maps to load...');
+                    return;
+                }
+
+                // Get the map instance
+                if (!map) {
+                    alert('Map is not ready yet. Please try again in a moment.');
+                    return;
+                }
+
+            // Get search value
+            const searchBox = document.getElementById('search-box');
+            const address = searchBox ? searchBox.value.trim() : '';
+            
+            if (!address) {
+                alert('Please enter an address to search');
+                return;
+            }
+
+            // Show loading
+            loadingDiv.style.display = 'flex';
+            loadingDiv.textContent = 'Searching...';
+            
+            try {
+                // Clear previous markers
+                if (currentMarker) {
+                    currentMarker.setMap(null);
+                }
+                if (currentInfoWindow) {
+                    currentInfoWindow.close();
+                }
+
+                // Search in farmLocations array first
+                const searchTerm = address.toLowerCase();
+                const location = farmLocations.find(loc => 
+                    loc && loc.address && loc.address.toLowerCase().includes(searchTerm)
+                );
+
+                if (location) {
+                    // Found in farm locations
+                    const pos = { lat: location.lat, lng: location.lng };
+                    map.setCenter(pos);
+                    map.setZoom(18);
+                    
+                    // Create marker
+                    currentMarker = new google.maps.Marker({
+                        map: map,
+                        position: pos,
+                        animation: google.maps.Animation.DROP
+                    });
+
+                    // Create info window
+                    currentInfoWindow = new google.maps.InfoWindow({
+                        content: `<div class="info-window">${location.address}</div>`
+                    });
+                    currentInfoWindow.open(map, currentMarker);
+                } else {
+                    // If not found in farm locations, try geocoding
+                    const geocoder = new google.maps.Geocoder();
+                    geocoder.geocode({ address: address }, (results, status) => {
+                        if (status === 'OK' && results && results[0]) {
+                            const pos = results[0].geometry.location;
+                            map.setCenter(pos);
+                            map.setZoom(18);
+                            
+                            // Create marker
+                            currentMarker = new google.maps.Marker({
+                                map: map,
+                                position: pos,
+                                animation: google.maps.Animation.DROP
+                            });
+
+                            // Create info window
+                            currentInfoWindow = new google.maps.InfoWindow({
+                                content: `<div class="info-window">${results[0].formatted_address}</div>`
+                            });
+                            currentInfoWindow.open(map, currentMarker);
+                        } else {
+                            alert('Unable to find address. Please try a different address.');
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                alert('Error during search: ' + error.message);
+            } finally {
+                // Hide loading indicator
+                loadingDiv.style.display = 'none';
+            }
+                }
+
+                    // Add marker
+                    new google.maps.Marker({
+                        map: map,
+                        position: { lat: location.lat, lng: location.lng },
+                        title: location.address
+                    });
+                } else {
+                    alert('Location not found. Please try a different search.');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                alert('Error during search: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Set up event listeners for search functionality
+        function setupSearchHandlers() {
             // Add search button click handler
             document.getElementById('search-button').addEventListener('click', searchAddress);
             
@@ -331,7 +1566,23 @@
                     searchAddress();
                 }
             });
-        };
+        }
+
+        // Global variable to track initialization
+        let mapInitialized = false;
+
+        // Set up the page when loaded
+        window.addEventListener('load', async () => {
+            try {
+                await initMap();
+                mapInitialized = true;
+                setupSearchHandlers();
+                console.log('Map initialization complete');
+            } catch (error) {
+                console.error('Failed to initialize map:', error);
+                document.getElementById('loading').textContent = 'Error loading map: ' + error;
+            }
+        });
     </script>
 </body>
 </html>
