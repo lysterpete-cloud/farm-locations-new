@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+
+﻿
+locations_map.html:136 Uncaught SyntaxError: Unexpected token 'async' (at locations_map.html:136:9)<!DOCTYPE html>
 <html>
 <head>
     <title>Farm Locations Map</title>
@@ -103,9 +105,9 @@
         let markers = [];
         let currentInfoWindow = null;
         let mapInitialized = false;
-        
-        // Store all farm locations
-        const farmLocations = [
+
+        // Function to add a marker to the map
+        function addMarker(location) {
             const marker = new google.maps.Marker({
                 position: { lat: location.lat, lng: location.lng },
                 map: map,
@@ -1290,9 +1292,15 @@
             
             // Create the map
             map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 18,  // Default zoom level for property view
-                center: { lat: 43.0, lng: -95.0 },  // Roughly center of coverage area
-                maxZoom: 19,  // Limit maximum zoom to maintain image quality
+                zoom: 13,
+                center: { lat: 45.541532, lng: -98.622688 },
+                maxZoom: 19
+            });
+            
+            // Add markers for all farm locations
+            farmLocations.forEach(location => {
+                addMarker(location);
+            });
                 mapTypeId: google.maps.MapTypeId.HYBRID,  // Satellite view with labels
                 tilt: 0,  // Ensure straight-down satellite view
                 streetViewControl: false,  // Disable street view
