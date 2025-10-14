@@ -1420,12 +1420,12 @@
             const searchBox = document.getElementById('search-box');
             const searchInput = searchBox ? searchBox.value.trim() : '';
             
-            try {
-                if (!searchInput) {
-                    alert('Please enter an address to search');
-                    return;
-                }
+            if (!searchInput) {
+                alert('Please enter an address to search');
+                return;
+            }
 
+            try {
                 // Show loading
                 loadingDiv.style.display = 'flex';
                 loadingDiv.textContent = 'Searching...';
@@ -1453,7 +1453,6 @@
                         const marker = addMarker(location);
                         markers.push(marker);
                     });
-                    loadingDiv.style.display = 'none';
                     return;
                 }
 
@@ -1469,11 +1468,10 @@
                     map.setCenter({ lat: firstMatch.lat, lng: firstMatch.lng });
                     map.setZoom(12);
                 }
-
-                loadingDiv.style.display = 'none';
             } catch (error) {
                 console.error('Search error:', error);
                 alert('An error occurred while searching. Please try again.');
+            } finally {
                 loadingDiv.style.display = 'none';
             }
         }
