@@ -182,7 +182,13 @@ locations_map.html:136 Uncaught SyntaxError: Unexpected token 'async' (at locati
                         style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR
                     },
                     fullscreenControl: false,
-                    keyboardShortcuts: false  // Disable keyboard shortcuts overlay
+                    keyboardShortcuts: false,  // Disable keyboard shortcuts overlay
+                    mapTypeControl: true,  // Keep the map type switcher (satellite/map)
+                    scaleControl: false,  // Hide the scale control
+                    rotateControl: false,  // Hide the rotate control
+                    disableDefaultUI: false,  // Keep essential controls
+                    clickableIcons: false,  // Disable POI clicks
+                    attributionControl: false  // Hide the attribution text
                 });
 
                 // Verify map was created successfully
