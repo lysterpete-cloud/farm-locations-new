@@ -78,7 +78,7 @@
 <body>
     <div id="map"></div>
     <div id="search-container">
-        <input type="text" id="search-box" placeholder="Enter an address to search..." />
+        <input type="text" id="search-box" placeholder="Enter street address..." />
         <button id="search-button">Search</button>
     </div>
     <div id="loading" class="loading-overlay">Loading 881 locations...</div>
@@ -105,10 +105,9 @@
         ];
 
         function searchFarmAddress(searchText) {
-            const search = searchText.toLowerCase();
+            const search = searchText.toLowerCase().trim();
             return farmLocations.find(loc => 
-                loc.address.toLowerCase().includes(search) || 
-                loc.fullAddress.toLowerCase().includes(search)
+                loc.address.toLowerCase().includes(search)
             );
         }
 
@@ -182,7 +181,7 @@
 
                     // Create info window
                     const infoWindow = new google.maps.InfoWindow({
-                        content: `<div class="info-window">${farmLocation.fullAddress}</div>`
+                        content: `<div class="info-window">${farmLocation.address}</div>`
                     });
 
                     marker.addListener('click', () => {
